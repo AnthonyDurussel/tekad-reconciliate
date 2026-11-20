@@ -1,0 +1,68 @@
+.brand {
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md)
+    var(--mantine-spacing-lg);
+  text-align: center;
+}
+
+.logo {
+  width: 190px;
+  height: auto;
+  display: inline-block;
+}
+
+.appName {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(63, 203, 184, 0.14);
+  color: var(--mantine-color-tekad-2);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.sectionTitle {
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.08em;
+}
+
+.link {
+  position: relative;
+  border-radius: var(--mantine-radius-md);
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 2px;
+  padding-block: 9px;
+  font-size: var(--mantine-font-size-sm);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.link.link:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--mantine-color-white);
+}
+
+/* Active: a turquoise wash and the bar of the mark's colour on the left. */
+.link[data-active],
+.link[data-active]:hover {
+  background-color: rgba(63, 203, 184, 0.18);
+  color: var(--mantine-color-white);
+}
+
+.link[data-active]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--mantine-color-tekad-4);
+}
+
+.link[data-active] :global(.mantine-NavLink-section) {
+  color: var(--mantine-color-tekad-3);
+}

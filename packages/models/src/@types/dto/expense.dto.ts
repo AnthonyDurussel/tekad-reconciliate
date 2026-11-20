@@ -99,6 +99,8 @@ export interface ExpenseDTO {
   bexioEntryId: string | null;
   bookedAt: string | null;
   note: string | null;
+  /** Raison donnée en ignorant la pièce. */
+  ignoreReason: string | null;
 }
 
 export interface ExpenseQueryDTO {

@@ -41,6 +41,7 @@ export const ExpenseMapper = {
       bexioEntryId: p.bexioEntryId,
       bookedAt: p.bookedAt?.toISOString() ?? null,
       note: p.note,
+      ignoreReason: p.ignoreReason,
     };
   },
 };

@@ -1,0 +1,463 @@
+{
+  "app": {
+    "subtitle": "Réconciliation des frais",
+    "environment": "Environnement {{environment}}",
+    "siteLine": "bexio · Revolut Business · UBS"
+  },
+  "login": {
+    "title": "Réconciliation des frais",
+    "subtitle": "Les pièces de l'inbox bexio, lues, classées par compte de paiement et rapprochées des transactions Revolut.",
+    "button": "Se connecter avec Microsoft",
+    "devAccounts": "Compte de développement",
+    "footer": "Accès réservé à Tekad et à sa fiduciaire.",
+    "welcome": "Bienvenue",
+    "heroTitle": "Chaque pièce lue, classée et rapprochée.",
+    "heroText": "Les tickets déposés dans l'inbox bexio sont lus (commerçant, date, montant, TVA, carte), rattachés au bon compte — Revolut, UBS ou compte courant d'Anthony — et au bon type de dépense ; l'écriture bexio est proposée, et les sorties Revolut sans pièce sont listées.",
+    "standards": "Tekad · bexio · Revolut Business · UBS"
+  },
+  "accessDenied": {
+    "title": "Accès refusé",
+    "text": "Votre compte n'a pas accès à cette page. Contactez l'administrateur si vous pensez qu'il s'agit d'une erreur.",
+    "back": "Retour à l'accueil"
+  },
+  "common": {
+    "add": "Ajouter",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "saved": "Modifications enregistrées",
+    "required": "Champ obligatoire",
+    "yes": "Oui",
+    "no": "Non",
+    "language": "Changer de langue",
+    "toggleColorScheme": "Thème clair / sombre",
+    "apiErrors": {
+      "title": "Erreur",
+      "network": "Le serveur est injoignable. Vérifiez votre connexion.",
+      "forbidden": "Vous n'avez pas les droits nécessaires.",
+      "notFound": "Élément introuvable.",
+      "server": "Erreur du serveur. Réessayez plus tard.",
+      "unexpected": "Une erreur inattendue s'est produite."
+    },
+    "errorBoundary": {
+      "title": "Cette page a rencontré une erreur",
+      "reload": "Recharger la page"
+    },
+    "loading": "Chargement…"
+  },
+  "userMenu": {
+    "label": "Menu du compte",
+    "darkMode": "Mode sombre",
+    "lightMode": "Mode clair",
+    "language": "Langue",
+    "version": "Version {{version}}"
+  },
+  "notifications": {
+    "enable": "Recevoir les e-mails",
+    "disable": "Ne plus recevoir les e-mails",
+    "on": "Vous recevrez les e-mails de l'application.",
+    "off": "Vous ne recevrez plus d'e-mails."
+  },
+  "auth": {
+    "signOut": "Se déconnecter"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "expenses": "Pièces",
+    "revolut": "Revolut",
+    "admin": {
+      "main": "Administration",
+      "accounts": "Comptes et cartes",
+      "categories": "Types de dépense",
+      "users": "Utilisateurs"
+    }
+  },
+  "period": {
+    "label": "Période",
+    "presets": "Périodes",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois",
+    "lastMonth": "Le mois passé",
+    "thisYear": "Cette année",
+    "last12Months": "12 derniers mois",
+    "custom": "Personnalisée",
+    "customPick": "Personnalisée…",
+    "last3Months": "3 derniers mois"
+  },
+  "dashboard": {
+    "empty": "Rien sur cette période.",
+    "noReference": "pas de référence",
+    "vsPrevious": "vs période préc.",
+    "title": "Tableau de bord",
+    "subtitle": "Où en sont les pièces de la période, ce qu'elles pèsent, ce qui manque.",
+    "missing": "Pièces Revolut manquantes",
+    "missingHint": "{{amount}} de sorties sans pièce",
+    "statusHint": {
+      "NEW": "importées, pas encore lues",
+      "TO_REVIEW": "il manque un compte, un type ou la transaction",
+      "READY": "prêtes à comptabiliser",
+      "BOOKED": "passées dans bexio",
+      "IGNORED": "écartées"
+    },
+    "byAccount": "Par compte de paiement",
+    "byCategory": "Par type de dépense",
+    "byCategoryHint": "Montants en CHF des pièces de la période, hors pièces ignorées.",
+    "periodTotal": "Du {{from}} au {{to}} · {{total}}",
+    "total": "total",
+    "receipts_one": "{{count}} pièce",
+    "receipts_other": "{{count}} pièces"
+  },
+  "sync": {
+    "title": "Synchronisation",
+    "subtitle": "Inbox bexio → lecture des pièces → transactions Revolut → rapprochement. Chaque nuit, et à la demande.",
+    "all": "Tout synchroniser",
+    "source": "Étape",
+    "lastRun": "Dernier passage",
+    "never": "Jamais lancée",
+    "count_one": "{{count}} élément traité",
+    "count_other": "{{count}} éléments traités",
+    "failed": "Échec de la synchronisation",
+    "configured": "Configuré",
+    "notConfigured": "non configuré",
+    "notConfiguredHint": "Paramètres manquants côté serveur : cette étape ne peut pas tourner.",
+    "history": "Derniers passages",
+    "service": {
+      "bexio": "bexio",
+      "revolut": "Revolut Business",
+      "extraction": "Lecture (Claude)"
+    },
+    "run": {
+      "bexio-inbox": "Importer l'inbox bexio",
+      "extract": "Lire les pièces",
+      "revolut": "Synchroniser Revolut",
+      "match": "Rapprocher"
+    }
+  },
+  "expenses": {
+    "title": "Pièces",
+    "subtitle": "Les pièces de l'inbox bexio : compte de paiement, type, imputation et rapprochement.",
+    "export": "Exporter (Excel)",
+    "allAccounts": "Tous",
+    "unclassified": "Non classé",
+    "noCategory": "Sans type",
+    "allCategories": "Tous les types",
+    "allStatuses": "Tous les statuts",
+    "search": "Rechercher (commerçant, fichier…)",
+    "date": "Date",
+    "merchant": "Commerçant",
+    "amount": "Montant",
+    "card": "Carte",
+    "account": "Compte de paiement",
+    "category": "Type de dépense",
+    "booking": "Imputation",
+    "status": "Statut",
+    "revolut": "Revolut",
+    "matched": "Rapprochée d'une transaction Revolut",
+    "notMatched": "Pas encore rapprochée",
+    "bexioEntry": "Écriture bexio n° {{id}}",
+    "empty": "Aucune pièce pour ces filtres.",
+    "total_one": "Total · {{count}} pièce",
+    "total_other": "Total · {{count}} pièces",
+    "unpriced_one": "{{count}} pièce sans montant en CHF n'est pas comptée.",
+    "unpriced_other": "{{count}} pièces sans montant en CHF ne sont pas comptées."
+  },
+  "expenseDetail": {
+    "title": "Pièce",
+    "back": "Retour aux pièces",
+    "notFound": "Pièce introuvable.",
+    "openFile": "Ouvrir",
+    "imported": "importée le {{date}}",
+    "fields": "Lecture de la pièce",
+    "confidence": "Confiance de la lecture : {{value}}",
+    "extractionError": "La lecture a échoué",
+    "notExtracted": "Pièce pas encore lue : « Relire la pièce » la fait lire maintenant.",
+    "description": "Description",
+    "currency": "Devise",
+    "vatAmount": "TVA",
+    "vatRate": "Taux de TVA",
+    "paymentMethod": "Paiement lu : {{method}}",
+    "cardInvalid": "4 chiffres",
+    "accountNoInvalid": "3 à 6 chiffres",
+    "aiCategory": "Proposition de l'IA : {{code}}",
+    "overrides": "Imputation bexio",
+    "overridesHint": "Vide : la proposition (en gris) — compte du type au débit, compte de paiement au crédit, code TVA du type.",
+    "debit": "Débit (charge)",
+    "credit": "Crédit (paiement)",
+    "taxId": "Code TVA bexio",
+    "noTax": "sans TVA",
+    "note": "Note",
+    "bookingProposal": "Écriture proposée",
+    "bookingDone": "Écriture comptabilisée",
+    "amountChf": "Montant CHF",
+    "missingTitle": "Pas encore comptabilisable",
+    "missing": {
+      "date": "La date de la pièce manque.",
+      "amount": "Le montant de la pièce manque.",
+      "paymentAccount": "Le compte de paiement n'est pas choisi (carte non reconnue).",
+      "category": "Le type de dépense n'est pas choisi.",
+      "transaction": "Payée avec Revolut : la transaction Revolut n'est pas rapprochée.",
+      "amountChf": "Le montant en CHF est inconnu (pièce en devise sans transaction Revolut).",
+      "debitAccount": "Le compte de charge (débit) manque.",
+      "creditAccount": "Le compte bexio du compte de paiement (crédit) manque."
+    },
+    "readyToBook": "Tout y est : la pièce peut être comptabilisée.",
+    "bookedEntry": "Écriture bexio n° {{id}} passée le {{date}}, pièce jointe.",
+    "bookedReconciliation": "Marquée comptabilisée le {{date}} (rapprochement bancaire dans bexio).",
+    "revolutTitle": "Rapprochement Revolut",
+    "noCandidates": "Aucune transaction Revolut ne correspond (montant, ± 5 jours).",
+    "candidatesHint": "Transactions classées par note : le montant est obligatoire ; la date, la carte et le commerçant départagent. Rapprochement automatique dès {{score}} points.",
+    "alreadyMatched": "déjà rapprochée d'une autre pièce",
+    "reasons": {
+      "amount": "montant",
+      "sameDay": "même jour",
+      "closeDate": "date proche",
+      "card": "même carte",
+      "otherCard": "autre carte",
+      "merchant": "commerçant"
+    },
+    "match": "Rapprocher",
+    "unmatch": "Détacher",
+    "matchedDone": "Pièce rapprochée.",
+    "unmatchedDone": "Transaction détachée.",
+    "lockedHint": "Annulez d'abord la comptabilisation.",
+    "extract": "Relire la pièce",
+    "extractedDone": "Pièce relue.",
+    "book": "Comptabiliser",
+    "markBooked": "Marquer comptabilisée (rapprochement dans bexio)",
+    "bookDisabled": "La pièce n'est pas prête : voir ce qui manque.",
+    "bookedDone": "Écriture passée dans bexio.",
+    "markedBookedDone": "Pièce marquée comptabilisée.",
+    "unbook": "Annuler la comptabilisation",
+    "unbookTitle": "Annuler la comptabilisation",
+    "unbookConfirm": "La pièce redevient à comptabiliser. Rien n'est changé dans bexio.",
+    "unbookConfirmEntry": "La pièce redevient à comptabiliser. Supprimez aussi l'écriture n° {{id}} dans bexio si elle doit disparaître.",
+    "unbookedDone": "Comptabilisation annulée.",
+    "ignore": "Ignorer",
+    "ignoreTitle": "Ignorer la pièce",
+    "ignoreHint": "Une pièce ignorée sort des listes et des totaux ; elle se restaure à tout moment.",
+    "ignoreReasons": {
+      "duplicate": "Doublon",
+      "private": "Dépense privée",
+      "notExpense": "Pas une dépense (facture client, document)"
+    },
+    "ignoredDone": "Pièce ignorée.",
+    "ignoredHint": "Pièce ignorée : elle n'entre ni dans les totaux ni dans la comptabilité.",
+    "restore": "Restaurer",
+    "restoredDone": "Pièce restaurée."
+  },
+  "revolut": {
+    "title": "Revolut",
+    "subtitle": "Les transactions Revolut Business et les pièces qui leur manquent.",
+    "search": "Rechercher (commerçant, libellé…)",
+    "tabs": {
+      "all": "Toutes",
+      "missing": "Pièces manquantes",
+      "matched": "Rapprochées",
+      "ignored": "Ignorées"
+    },
+    "receipt": "Pièce",
+    "openReceipt": "Voir la pièce",
+    "missing": "Pièce manquante",
+    "notRequired": "pas de pièce requise",
+    "ignored": "Pas de pièce",
+    "ignore": "Pas de pièce : ignorer",
+    "restore": "Restaurer",
+    "ignoreTitle": "Transaction sans pièce",
+    "ignoreReasons": {
+      "bankFee": "Pas de pièce : abonnement bancaire",
+      "transfer": "Virement interne",
+      "salary": "Salaire",
+      "tax": "Impôts et taxes"
+    },
+    "missingTitle_one": "{{count}} pièce à demander",
+    "missingTitle_other": "{{count}} pièces à demander",
+    "missingText": "Sorties Revolut sans pièce ni dispense : {{total}}.",
+    "missingNone": "Toutes les sorties Revolut de la période ont leur pièce.",
+    "copy": "Copier la liste",
+    "copied": "Liste copiée dans le presse-papiers.",
+    "copyFailed": "La liste n'a pas pu être copiée.",
+    "copyHeading_one": "Pièce manquante du {{from}} au {{to}} ({{count}}) :",
+    "copyHeading_other": "Pièces manquantes du {{from}} au {{to}} ({{count}}) :",
+    "total": "Total des mouvements : {{total}}",
+    "empty": "Aucune transaction pour ces filtres.",
+    "type": {
+      "card_payment": "Paiement par carte",
+      "transfer": "Virement",
+      "exchange": "Change",
+      "fee": "Frais",
+      "topup": "Approvisionnement",
+      "refund": "Remboursement",
+      "card_refund": "Remboursement carte",
+      "atm": "Retrait",
+      "tax": "Taxe",
+      "charge": "Frais"
+    }
+  },
+  "ignore": {
+    "reason": "Raison",
+    "confirm": "Ignorer"
+  },
+  "admin": {
+    "common": {
+      "active": "Actif",
+      "usage": "Pièces",
+      "inUse": "Utilisé par des pièces : désactivez-le plutôt.",
+      "accountNoInvalid": "Compte bexio : 3 à 6 chiffres"
+    },
+    "accounts": {
+      "title": "Comptes et cartes",
+      "subtitle": "Les comptes qui paient, leur compte bexio, et les cartes reconnues sur les tickets.",
+      "create": "Nouveau compte",
+      "edit": "Modifier le compte",
+      "empty": "Aucun compte de paiement.",
+      "name": "Nom",
+      "kind": "Genre",
+      "bexioAccount": "Compte bexio",
+      "bexioAccountHint": "Compte crédité (1021 Revolut, 1020 UBS, 2210 compte courant Anthony…)",
+      "bookingMode": "Comptabilisation",
+      "bookingModeHint": {
+        "MANUAL_ENTRY": "L'application passe l'écriture dans bexio, pièce jointe.",
+        "BEXIO_RECONCILIATION": "L'écriture naît du rapprochement bancaire dans bexio ; l'application marque la pièce comptabilisée."
+      },
+      "revolutAccountId": "Compte Revolut (account_id)",
+      "revolutAccountIdHint": "Identifiant du compte dans Revolut Business : ses transactions sont rattachées à ce compte.",
+      "cards": "Cartes",
+      "cardsHint": "Les 4 derniers chiffres lus sur un ticket rattachent la pièce à ce compte.",
+      "last4": "4 derniers chiffres",
+      "cardLabel": "Libellé",
+      "holder": "Titulaire",
+      "addCard": "Ajouter une carte",
+      "last4Invalid": "4 chiffres",
+      "last4Duplicate": "Carte en double",
+      "activeHint": "Un compte inactif ne se propose plus, mais reste sur ses pièces.",
+      "deleteTitle": "Supprimer le compte",
+      "deleteConfirm": "Supprimer le compte « {{name}} » et ses cartes ?"
+    },
+    "categories": {
+      "title": "Types de dépense",
+      "subtitle": "Le compte de charge, la TVA et les règles qui reconnaissent chaque type.",
+      "create": "Nouveau type",
+      "edit": "Modifier le type",
+      "empty": "Aucun type de dépense.",
+      "code": "Code",
+      "codeHint": "Code stable, proposé par la lecture IA (ex. IT, REPAS, TRANSPORT).",
+      "label": "Libellé",
+      "bexioAccount": "Compte de charge",
+      "bexioAccountHint": "Compte bexio débité (ex. 6570 Informatique).",
+      "tax": "TVA",
+      "vatRate": "Taux de TVA",
+      "taxId": "Code TVA bexio",
+      "taxIdHint": "tax_id bexio ; vide : sans TVA.",
+      "taxIdShort": "code {{id}}",
+      "rules": "Règles",
+      "keywords": "Mots-clés",
+      "keywordsHint": "Repérés dans le commerçant ou le texte du ticket (« swisscom », « sbb »). Entrée pour ajouter.",
+      "keywordInvalid": "Un mot-clé compte au moins 2 caractères.",
+      "mccCodes": "Codes MCC",
+      "mccCodesHint": "Codes marchands des paiements par carte (5812 restaurants…). Entrée pour ajouter.",
+      "mccInvalid": "Codes MCC à 4 chiffres : {{codes}}",
+      "mccCount_one": "{{count}} MCC",
+      "mccCount_other": "{{count}} MCC",
+      "activeHint": "Un type inactif ne se propose plus, mais reste sur ses pièces.",
+      "deleteTitle": "Supprimer le type",
+      "deleteConfirm": "Supprimer le type « {{label}} » ?"
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "subtitle": "Comptes et rôles. Un compte qui se connecte pour la première fois n'a accès à rien tant qu'un rôle ne lui est pas donné.",
+      "create": "Nouveau compte",
+      "name": "Nom",
+      "email": "E-mail",
+      "emailInvalid": "Adresse e-mail invalide",
+      "role": "Rôle",
+      "lastSeen": "Dernière connexion",
+      "active": "Actif",
+      "notifications": "E-mails",
+      "edit": "Modifier le compte",
+      "invite": "Envoyer une invitation",
+      "sendInvitation": "Envoyer une invitation par e-mail",
+      "sendInvitationHint": "Le message mène à l'application ; la personne se connecte avec son compte Microsoft, ou avec un code reçu par e-mail si son adresse est externe.",
+      "emailChangeHint": "La personne se connectera avec cette adresse. Hors de l'organisation, elle est invitée dans Entra ID (sans e-mail de Microsoft).",
+      "invitation": {
+        "SENT": "Invitation envoyée à {{email}}",
+        "NOT_CONFIGURED": "Messagerie non configurée : aucune invitation envoyée à {{email}}",
+        "FAILED": "L'invitation n'a pas pu être envoyée à {{email}}"
+      },
+      "entra": {
+        "title": "Accès Entra ID",
+        "loadError": "La configuration Entra ID n'a pas pu être lue",
+        "notConfigured": "Microsoft Graph n'est pas configuré : les comptes créés ne sont ni vérifiés ni invités dans Entra ID.",
+        "assignmentRequired": "Affectation requise",
+        "homeTenant": "tenant d'origine",
+        "allTenants": "Les comptes du tenant d'origine se connectent directement. Toute autre adresse (gmail.com, une autre entreprise…) est invitée comme invité externe à la création du compte, sans e-mail de Microsoft.",
+        "allowedTenantsHint": "Les comptes du tenant d'origine se connectent directement. Toute autre adresse (gmail.com, une autre entreprise…) est invitée comme invité externe à la création du compte, sans e-mail de Microsoft.",
+        "homeTenantOnly": "Les comptes du tenant d'origine se connectent directement. Toute autre adresse (gmail.com, une autre entreprise…) est invitée comme invité externe à la création du compte, sans e-mail de Microsoft.",
+        "columns": {
+          "tenant": "Tenant",
+          "domain": "Domaine",
+          "tenantId": "ID du tenant"
+        },
+        "audience": {
+          "myOrg": "Un seul tenant",
+          "multipleOrgs": "Plusieurs tenants",
+          "withPersonal": "Plusieurs tenants + comptes personnels",
+          "personalOnly": "Comptes personnels seulement"
+        }
+      },
+      "guest": "Invité externe",
+      "guestHint": "Invité·e dans Entra ID par l'application, sans e-mail de Microsoft : se connecte avec son compte Microsoft ou un code reçu par e-mail.",
+      "emailHint": "Une adresse hors de l'organisation (gmail.com, une autre entreprise…) est invitée automatiquement dans Entra ID, sans e-mail de Microsoft.",
+      "guestInvitedTitle": "Invité externe",
+      "guestInvited": "{{email}} a été invité·e dans Entra ID (sans e-mail de Microsoft). À sa première connexion, la personne se connecte avec son compte Microsoft ou un code reçu par e-mail et accepte l'invitation.",
+      "guestAssignmentTitle": "Affectation à faire dans Entra ID",
+      "deleteTitle": "Supprimer le compte",
+      "deleteConfirm": "Supprimer le compte de {{name}} ({{email}}) ? Un compte qui a traité des pièces ne peut pas être supprimé : désactivez-le.",
+      "deleted": "Compte de {{name}} supprimé."
+    }
+  },
+  "enum": {
+    "role": {
+      "ADMIN": "Administrateur·trice",
+      "ACCOUNTANT": "Comptable",
+      "VIEWER": "Lecture seule"
+    },
+    "expenseStatus": {
+      "NEW": "À lire",
+      "TO_REVIEW": "À compléter",
+      "READY": "Prête",
+      "BOOKED": "Comptabilisée",
+      "IGNORED": "Ignorée"
+    },
+    "suggestionSource": {
+      "CARD": "carte",
+      "TRANSACTION": "transaction",
+      "RULE": "règle",
+      "AI": "IA",
+      "MANUAL": "saisi"
+    },
+    "suggestionSourceHint": {
+      "CARD": "Déduit de la carte lue sur le ticket.",
+      "TRANSACTION": "Déduit de la transaction Revolut rapprochée.",
+      "RULE": "Trouvé par un mot-clé ou un code MCC du type.",
+      "AI": "Proposé par la lecture IA de la pièce.",
+      "MANUAL": "Saisi à la main : une relecture ne l'écrase pas."
+    },
+    "paymentAccountKind": {
+      "REVOLUT": "Revolut Business",
+      "UBS": "UBS",
+      "PERSONAL": "Compte courant associé",
+      "OTHER": "Autre"
+    },
+    "bookingMode": {
+      "MANUAL_ENTRY": "Écriture passée par l'application",
+      "BEXIO_RECONCILIATION": "Rapprochement bancaire dans bexio"
+    },
+    "syncSource": {
+      "BEXIO_INBOX": "Inbox bexio",
+      "EXTRACTION": "Lecture des pièces",
+      "REVOLUT": "Transactions Revolut",
+      "MATCHING": "Rapprochement"
+    }
+  }
+}

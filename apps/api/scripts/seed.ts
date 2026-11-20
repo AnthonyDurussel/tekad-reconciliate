@@ -17,6 +17,7 @@ import {
   BookingModeDTO,
   ExpenseStatusDTO,
   PaymentAccountKindDTO,
+  RoleDTO,
 } from "@repo/models";
 import { prisma } from "@/shared/infrastructure/prismaClient.js";
 
@@ -369,9 +370,28 @@ async function seedDemo() {
   );
 }
 
+/** Comptes de développement offerts par la page de connexion simulée (`apps/frontend/mock`). */
+async function seedDevUsers() {
+  const users = [
+    { email: "admin@tekad.dev", name: "Admin Tekad", role: RoleDTO.ADMIN },
+    {
+      email: "comptable@tekad.dev",
+      name: "Comptable",
+      role: RoleDTO.ACCOUNTANT,
+    },
+    { email: "lecture@tekad.dev", name: "Lecture", role: RoleDTO.VIEWER },
+  ];
+  for (const u of users) {
+    if (!(await prisma.userDB.findUnique({ where: { email: u.email } }))) {
+      await prisma.userDB.create({ data: u });
+    }
+  }
+}
+
 async function main() {
   await seedSettings();
   if (process.env.SEED_DEMO?.trim().toLowerCase() !== "false") {
+    await seedDevUsers();
     await seedDemo();
   }
 }

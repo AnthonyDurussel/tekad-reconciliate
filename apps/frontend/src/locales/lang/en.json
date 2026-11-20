@@ -1,0 +1,463 @@
+{
+  "app": {
+    "subtitle": "Expense reconciliation",
+    "environment": "{{environment}} environment",
+    "siteLine": "bexio · Revolut Business · UBS"
+  },
+  "login": {
+    "title": "Expense reconciliation",
+    "subtitle": "Receipts from the bexio inbox, read, sorted by payment account and matched with Revolut transactions.",
+    "button": "Sign in with Microsoft",
+    "devAccounts": "Development account",
+    "footer": "Restricted to Tekad and its accounting firm.",
+    "welcome": "Welcome",
+    "heroTitle": "Every receipt read, sorted and matched.",
+    "heroText": "Receipts dropped into the bexio inbox are read (merchant, date, amount, VAT, card), assigned to the right account — Revolut, UBS or Anthony's current account — and to the right expense type; the bexio entry is proposed, and Revolut debits without a receipt are listed.",
+    "standards": "Tekad · bexio · Revolut Business · UBS"
+  },
+  "accessDenied": {
+    "title": "Access denied",
+    "text": "Your account cannot access this page. Contact the administrator if you think this is a mistake.",
+    "back": "Back to home"
+  },
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "saved": "Changes saved",
+    "required": "Required field",
+    "yes": "Yes",
+    "no": "No",
+    "language": "Switch language",
+    "toggleColorScheme": "Light / dark theme",
+    "apiErrors": {
+      "title": "Error",
+      "network": "The server cannot be reached. Check your connection.",
+      "forbidden": "You do not have the required permissions.",
+      "notFound": "Item not found.",
+      "server": "Server error. Please try again later.",
+      "unexpected": "An unexpected error occurred."
+    },
+    "errorBoundary": {
+      "title": "This page ran into an error",
+      "reload": "Reload the page"
+    },
+    "loading": "Loading…"
+  },
+  "userMenu": {
+    "label": "Account menu",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode",
+    "language": "Language",
+    "version": "Version {{version}}"
+  },
+  "notifications": {
+    "enable": "Receive e-mails",
+    "disable": "Stop receiving e-mails",
+    "on": "You will receive the application's e-mails.",
+    "off": "You will no longer receive e-mails."
+  },
+  "auth": {
+    "signOut": "Sign out"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "expenses": "Receipts",
+    "revolut": "Revolut",
+    "admin": {
+      "main": "Administration",
+      "accounts": "Accounts & cards",
+      "categories": "Expense types",
+      "users": "Users"
+    }
+  },
+  "period": {
+    "label": "Period",
+    "presets": "Periods",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "last12Months": "Last 12 months",
+    "custom": "Custom",
+    "customPick": "Custom…",
+    "last3Months": "Last 3 months"
+  },
+  "dashboard": {
+    "empty": "Nothing in this period.",
+    "noReference": "no reference",
+    "vsPrevious": "vs previous period",
+    "title": "Dashboard",
+    "subtitle": "Where the period's receipts stand, what they weigh, what is missing.",
+    "missing": "Missing Revolut receipts",
+    "missingHint": "{{amount}} of debits without a receipt",
+    "statusHint": {
+      "NEW": "imported, not read yet",
+      "TO_REVIEW": "account, type or transaction missing",
+      "READY": "ready to book",
+      "BOOKED": "posted to bexio",
+      "IGNORED": "set aside"
+    },
+    "byAccount": "By payment account",
+    "byCategory": "By expense type",
+    "byCategoryHint": "CHF amounts of the period's receipts, ignored receipts excluded.",
+    "periodTotal": "From {{from}} to {{to}} · {{total}}",
+    "total": "total",
+    "receipts_one": "{{count}} receipt",
+    "receipts_other": "{{count}} receipts"
+  },
+  "sync": {
+    "title": "Synchronisation",
+    "subtitle": "bexio inbox → receipt reading → Revolut transactions → matching. Every night, and on demand.",
+    "all": "Sync everything",
+    "source": "Step",
+    "lastRun": "Last run",
+    "never": "Never run",
+    "count_one": "{{count}} item processed",
+    "count_other": "{{count}} items processed",
+    "failed": "Synchronisation failed",
+    "configured": "Configured",
+    "notConfigured": "not configured",
+    "notConfiguredHint": "Server settings missing: this step cannot run.",
+    "history": "Latest runs",
+    "service": {
+      "bexio": "bexio",
+      "revolut": "Revolut Business",
+      "extraction": "Reading (Claude)"
+    },
+    "run": {
+      "bexio-inbox": "Import the bexio inbox",
+      "extract": "Read receipts",
+      "revolut": "Sync Revolut",
+      "match": "Match"
+    }
+  },
+  "expenses": {
+    "title": "Receipts",
+    "subtitle": "Receipts from the bexio inbox: payment account, type, booking and matching.",
+    "export": "Export (Excel)",
+    "allAccounts": "All",
+    "unclassified": "Unclassified",
+    "noCategory": "No type",
+    "allCategories": "All types",
+    "allStatuses": "All statuses",
+    "search": "Search (merchant, file…)",
+    "date": "Date",
+    "merchant": "Merchant",
+    "amount": "Amount",
+    "card": "Card",
+    "account": "Payment account",
+    "category": "Expense type",
+    "booking": "Booking",
+    "status": "Status",
+    "revolut": "Revolut",
+    "matched": "Matched with a Revolut transaction",
+    "notMatched": "Not matched yet",
+    "bexioEntry": "bexio entry no. {{id}}",
+    "empty": "No receipt for these filters.",
+    "total_one": "Total · {{count}} receipt",
+    "total_other": "Total · {{count}} receipts",
+    "unpriced_one": "{{count}} receipt without a CHF amount is not counted.",
+    "unpriced_other": "{{count}} receipts without a CHF amount are not counted."
+  },
+  "expenseDetail": {
+    "title": "Receipt",
+    "back": "Back to receipts",
+    "notFound": "Receipt not found.",
+    "openFile": "Open",
+    "imported": "imported on {{date}}",
+    "fields": "Receipt reading",
+    "confidence": "Reading confidence: {{value}}",
+    "extractionError": "Reading failed",
+    "notExtracted": "Receipt not read yet: \"Read again\" reads it now.",
+    "description": "Description",
+    "currency": "Currency",
+    "vatAmount": "VAT",
+    "vatRate": "VAT rate",
+    "paymentMethod": "Payment read: {{method}}",
+    "cardInvalid": "4 digits",
+    "accountNoInvalid": "3 to 6 digits",
+    "aiCategory": "AI proposal: {{code}}",
+    "overrides": "bexio booking",
+    "overridesHint": "Empty: the proposal (in grey) — the type's account debited, the payment account credited, the type's VAT code.",
+    "debit": "Debit (expense)",
+    "credit": "Credit (payment)",
+    "taxId": "bexio VAT code",
+    "noTax": "no VAT",
+    "note": "Note",
+    "bookingProposal": "Proposed entry",
+    "bookingDone": "Booked entry",
+    "amountChf": "Amount CHF",
+    "missingTitle": "Not bookable yet",
+    "missing": {
+      "date": "The receipt date is missing.",
+      "amount": "The receipt amount is missing.",
+      "paymentAccount": "No payment account chosen (card not recognised).",
+      "category": "No expense type chosen.",
+      "transaction": "Paid with Revolut: the Revolut transaction is not matched.",
+      "amountChf": "The CHF amount is unknown (foreign-currency receipt without a Revolut transaction).",
+      "debitAccount": "The expense account (debit) is missing.",
+      "creditAccount": "The payment account's bexio account (credit) is missing."
+    },
+    "readyToBook": "All set: the receipt can be booked.",
+    "bookedEntry": "bexio entry no. {{id}} posted on {{date}}, receipt attached.",
+    "bookedReconciliation": "Marked booked on {{date}} (bank reconciliation in bexio).",
+    "revolutTitle": "Revolut matching",
+    "noCandidates": "No Revolut transaction matches (amount, ± 5 days).",
+    "candidatesHint": "Transactions ranked by score: the amount is mandatory; date, card and merchant break ties. Automatic matching from {{score}} points.",
+    "alreadyMatched": "already matched with another receipt",
+    "reasons": {
+      "amount": "amount",
+      "sameDay": "same day",
+      "closeDate": "close date",
+      "card": "same card",
+      "otherCard": "other card",
+      "merchant": "merchant"
+    },
+    "match": "Match",
+    "unmatch": "Detach",
+    "matchedDone": "Receipt matched.",
+    "unmatchedDone": "Transaction detached.",
+    "lockedHint": "Cancel the booking first.",
+    "extract": "Read again",
+    "extractedDone": "Receipt read again.",
+    "book": "Book",
+    "markBooked": "Mark booked (reconciled in bexio)",
+    "bookDisabled": "The receipt is not ready: see what is missing.",
+    "bookedDone": "Entry posted to bexio.",
+    "markedBookedDone": "Receipt marked booked.",
+    "unbook": "Cancel booking",
+    "unbookTitle": "Cancel booking",
+    "unbookConfirm": "The receipt goes back to be booked. Nothing changes in bexio.",
+    "unbookConfirmEntry": "The receipt goes back to be booked. Also delete entry no. {{id}} in bexio if it must go.",
+    "unbookedDone": "Booking cancelled.",
+    "ignore": "Ignore",
+    "ignoreTitle": "Ignore the receipt",
+    "ignoreHint": "An ignored receipt leaves lists and totals; it can be restored at any time.",
+    "ignoreReasons": {
+      "duplicate": "Duplicate",
+      "private": "Private expense",
+      "notExpense": "Not an expense (customer invoice, document)"
+    },
+    "ignoredDone": "Receipt ignored.",
+    "ignoredHint": "Ignored receipt: it counts neither in totals nor in the books.",
+    "restore": "Restore",
+    "restoredDone": "Receipt restored."
+  },
+  "revolut": {
+    "title": "Revolut",
+    "subtitle": "Revolut Business transactions and the receipts they lack.",
+    "search": "Search (merchant, reference…)",
+    "tabs": {
+      "all": "All",
+      "missing": "Missing receipts",
+      "matched": "Matched",
+      "ignored": "Ignored"
+    },
+    "receipt": "Receipt",
+    "openReceipt": "Open receipt",
+    "missing": "Missing receipt",
+    "notRequired": "no receipt required",
+    "ignored": "No receipt",
+    "ignore": "No receipt: ignore",
+    "restore": "Restore",
+    "ignoreTitle": "Transaction without a receipt",
+    "ignoreReasons": {
+      "bankFee": "No receipt: bank subscription",
+      "transfer": "Internal transfer",
+      "salary": "Salary",
+      "tax": "Taxes"
+    },
+    "missingTitle_one": "{{count}} receipt to ask for",
+    "missingTitle_other": "{{count}} receipts to ask for",
+    "missingText": "Revolut debits without a receipt or waiver: {{total}}.",
+    "missingNone": "Every Revolut debit of the period has its receipt.",
+    "copy": "Copy the list",
+    "copied": "List copied to the clipboard.",
+    "copyFailed": "The list could not be copied.",
+    "copyHeading_one": "Missing receipt from {{from}} to {{to}} ({{count}}):",
+    "copyHeading_other": "Missing receipts from {{from}} to {{to}} ({{count}}):",
+    "total": "Total of movements: {{total}}",
+    "empty": "No transaction for these filters.",
+    "type": {
+      "card_payment": "Card payment",
+      "transfer": "Transfer",
+      "exchange": "Exchange",
+      "fee": "Fee",
+      "topup": "Top-up",
+      "refund": "Refund",
+      "card_refund": "Card refund",
+      "atm": "Cash withdrawal",
+      "tax": "Tax",
+      "charge": "Charge"
+    }
+  },
+  "ignore": {
+    "reason": "Reason",
+    "confirm": "Ignore"
+  },
+  "admin": {
+    "common": {
+      "active": "Active",
+      "usage": "Receipts",
+      "inUse": "Used by receipts: deactivate it instead.",
+      "accountNoInvalid": "bexio account: 3 to 6 digits"
+    },
+    "accounts": {
+      "title": "Accounts & cards",
+      "subtitle": "The accounts that pay, their bexio account, and the cards recognised on receipts.",
+      "create": "New account",
+      "edit": "Edit account",
+      "empty": "No payment account.",
+      "name": "Name",
+      "kind": "Kind",
+      "bexioAccount": "bexio account",
+      "bexioAccountHint": "Account credited (1021 Revolut, 1020 UBS, 2210 Anthony's current account…)",
+      "bookingMode": "Booking",
+      "bookingModeHint": {
+        "MANUAL_ENTRY": "The application posts the entry in bexio, receipt attached.",
+        "BEXIO_RECONCILIATION": "The entry comes from the bank reconciliation in bexio; the application marks the receipt booked."
+      },
+      "revolutAccountId": "Revolut account (account_id)",
+      "revolutAccountIdHint": "Account id in Revolut Business: its transactions belong to this account.",
+      "cards": "Cards",
+      "cardsHint": "The last 4 digits read on a receipt assign it to this account.",
+      "last4": "Last 4 digits",
+      "cardLabel": "Label",
+      "holder": "Holder",
+      "addCard": "Add a card",
+      "last4Invalid": "4 digits",
+      "last4Duplicate": "Duplicate card",
+      "activeHint": "An inactive account is no longer offered, but stays on its receipts.",
+      "deleteTitle": "Delete account",
+      "deleteConfirm": "Delete the account \"{{name}}\" and its cards?"
+    },
+    "categories": {
+      "title": "Expense types",
+      "subtitle": "The expense account, VAT and rules that recognise each type.",
+      "create": "New type",
+      "edit": "Edit type",
+      "empty": "No expense type.",
+      "code": "Code",
+      "codeHint": "Stable code, proposed by the AI reading (e.g. IT, MEALS, TRANSPORT).",
+      "label": "Label",
+      "bexioAccount": "Expense account",
+      "bexioAccountHint": "bexio account debited (e.g. 6570 IT).",
+      "tax": "VAT",
+      "vatRate": "VAT rate",
+      "taxId": "bexio VAT code",
+      "taxIdHint": "bexio tax_id; empty: no VAT.",
+      "taxIdShort": "code {{id}}",
+      "rules": "Rules",
+      "keywords": "Keywords",
+      "keywordsHint": "Found in the merchant or the receipt text (\"swisscom\", \"sbb\"). Enter to add.",
+      "keywordInvalid": "A keyword has at least 2 characters.",
+      "mccCodes": "MCC codes",
+      "mccCodesHint": "Merchant codes of card payments (5812 restaurants…). Enter to add.",
+      "mccInvalid": "4-digit MCC codes: {{codes}}",
+      "mccCount_one": "{{count}} MCC",
+      "mccCount_other": "{{count}} MCC",
+      "activeHint": "An inactive type is no longer offered, but stays on its receipts.",
+      "deleteTitle": "Delete type",
+      "deleteConfirm": "Delete the type \"{{label}}\"?"
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "Accounts and roles. An account signing in for the first time has no access until it is given a role.",
+      "create": "New account",
+      "name": "Name",
+      "email": "E-mail",
+      "emailInvalid": "Invalid e-mail address",
+      "role": "Role",
+      "lastSeen": "Last sign-in",
+      "active": "Active",
+      "notifications": "E-mails",
+      "edit": "Edit account",
+      "invite": "Send an invitation",
+      "sendInvitation": "Send an invitation e-mail",
+      "sendInvitationHint": "The message leads to the application; the person signs in with their Microsoft account, or with a code received by e-mail for an external address.",
+      "emailChangeHint": "The person will sign in with this address. Outside the organisation, they are invited into Entra ID (without Microsoft's e-mail).",
+      "invitation": {
+        "SENT": "Invitation sent to {{email}}",
+        "NOT_CONFIGURED": "E-mail not configured: no invitation sent to {{email}}",
+        "FAILED": "The invitation could not be sent to {{email}}"
+      },
+      "entra": {
+        "title": "Entra ID access",
+        "loadError": "The Entra ID configuration could not be read",
+        "notConfigured": "Microsoft Graph is not configured: created accounts are neither checked nor invited in Entra ID.",
+        "assignmentRequired": "Assignment required",
+        "homeTenant": "home tenant",
+        "allTenants": "Accounts of the home tenant sign in directly. Any other address (gmail.com, another company…) is invited as an external guest when the account is created, without Microsoft's e-mail.",
+        "allowedTenantsHint": "Accounts of the home tenant sign in directly. Any other address (gmail.com, another company…) is invited as an external guest when the account is created, without Microsoft's e-mail.",
+        "homeTenantOnly": "Accounts of the home tenant sign in directly. Any other address (gmail.com, another company…) is invited as an external guest when the account is created, without Microsoft's e-mail.",
+        "columns": {
+          "tenant": "Tenant",
+          "domain": "Domain",
+          "tenantId": "Tenant ID"
+        },
+        "audience": {
+          "myOrg": "Single tenant",
+          "multipleOrgs": "Multiple tenants",
+          "withPersonal": "Multiple tenants + personal accounts",
+          "personalOnly": "Personal accounts only"
+        }
+      },
+      "guest": "External guest",
+      "guestHint": "Invited into Entra ID by the application, without Microsoft's e-mail: signs in with their Microsoft account or a code received by e-mail.",
+      "emailHint": "An address outside the organisation (gmail.com, another company…) is invited into Entra ID automatically, without Microsoft's e-mail.",
+      "guestInvitedTitle": "External guest",
+      "guestInvited": "{{email}} was invited into Entra ID (without Microsoft's e-mail). On first sign-in, they use their Microsoft account or a code received by e-mail and accept the invitation.",
+      "guestAssignmentTitle": "Assignment to do in Entra ID",
+      "deleteTitle": "Delete account",
+      "deleteConfirm": "Delete the account of {{name}} ({{email}})? An account that handled receipts cannot be deleted: deactivate it.",
+      "deleted": "Account of {{name}} deleted."
+    }
+  },
+  "enum": {
+    "role": {
+      "ADMIN": "Administrator",
+      "ACCOUNTANT": "Accountant",
+      "VIEWER": "Read only"
+    },
+    "expenseStatus": {
+      "NEW": "To read",
+      "TO_REVIEW": "To complete",
+      "READY": "Ready",
+      "BOOKED": "Booked",
+      "IGNORED": "Ignored"
+    },
+    "suggestionSource": {
+      "CARD": "card",
+      "TRANSACTION": "transaction",
+      "RULE": "rule",
+      "AI": "AI",
+      "MANUAL": "manual"
+    },
+    "suggestionSourceHint": {
+      "CARD": "From the card read on the receipt.",
+      "TRANSACTION": "From the matched Revolut transaction.",
+      "RULE": "Found by a keyword or MCC code of the type.",
+      "AI": "Proposed by the AI reading of the receipt.",
+      "MANUAL": "Entered by hand: a new reading does not overwrite it."
+    },
+    "paymentAccountKind": {
+      "REVOLUT": "Revolut Business",
+      "UBS": "UBS",
+      "PERSONAL": "Partner's current account",
+      "OTHER": "Other"
+    },
+    "bookingMode": {
+      "MANUAL_ENTRY": "Entry posted by the application",
+      "BEXIO_RECONCILIATION": "Bank reconciliation in bexio"
+    },
+    "syncSource": {
+      "BEXIO_INBOX": "bexio inbox",
+      "EXTRACTION": "Receipt reading",
+      "REVOLUT": "Revolut transactions",
+      "MATCHING": "Matching"
+    }
+  }
+}

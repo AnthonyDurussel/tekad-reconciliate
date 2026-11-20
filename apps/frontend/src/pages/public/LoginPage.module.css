@@ -1,0 +1,89 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+
+  @media (min-width: $mantine-breakpoint-md) {
+    grid-template-columns: minmax(0, 1.1fr) minmax(420px, 1fr);
+  }
+}
+
+/* The brand panel: the valley at night, contour lines spreading from the mark. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 56px;
+  color: var(--mantine-color-white);
+  background-color: #13233a;
+  background-image:
+    radial-gradient(
+      70% 60% at 85% 100%,
+      rgba(63, 203, 184, 0.32),
+      transparent 70%
+    ),
+    repeating-radial-gradient(
+      circle at 85% 100%,
+      transparent 0 54px,
+      rgba(157, 230, 220, 0.07) 54px 55px,
+      transparent 55px 56px
+    ),
+    linear-gradient(160deg, #1d3350 0%, #0d1825 100%);
+
+  @media (min-width: $mantine-breakpoint-md) {
+    display: flex;
+  }
+}
+
+.heroLogo {
+  width: 240px;
+  height: auto;
+}
+
+.heroTitle {
+  max-width: 460px;
+  font-size: 38px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.heroText {
+  max-width: 440px;
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.standards {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mantine-spacing-xl) var(--mantine-spacing-md);
+}
+
+.form {
+  width: 100%;
+  max-width: 380px;
+}
+
+.eyebrow {
+  color: var(--mantine-color-tekad-7);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+
+  @mixin dark {
+    color: var(--mantine-color-tekad-3);
+  }
+}

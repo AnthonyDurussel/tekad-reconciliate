@@ -1,0 +1,147 @@
+/* The loading curtain, driven by `curtainController.ts`. Hidden until `data-shown` is set. */
+.curtain {
+  position: fixed;
+  inset: 0;
+  /* Above the shell, modals (200) and popovers (600), under notifications (1000). */
+  z-index: 700;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.curtain[data-shown] {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* The brand ground: a soft glow of the diamond's teal and faint rings. */
+.veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-color: #f3f6f8;
+  background-image:
+    radial-gradient(
+      55% 50% at 50% 46%,
+      rgba(63, 203, 184, 0.16) 0%,
+      transparent 70%
+    ),
+    repeating-radial-gradient(
+      circle at 50% 46%,
+      transparent 0 46px,
+      rgba(11, 133, 119, 0.08) 46px 47px,
+      transparent 47px 48px
+    );
+
+  @mixin dark {
+    background-color: #0e1620;
+    background-image:
+      radial-gradient(
+        55% 50% at 50% 46%,
+        rgba(63, 203, 184, 0.2) 0%,
+        transparent 70%
+      ),
+      repeating-radial-gradient(
+        circle at 50% 46%,
+        transparent 0 46px,
+        rgba(157, 230, 220, 0.06) 46px 47px,
+        transparent 47px 48px
+      );
+  }
+}
+
+.curtain[data-shown] .veil {
+  opacity: 1;
+}
+
+/* The logo, large. The dive goes through the diamond (118.4, 114.5 of the -20 -20 800 230 box). */
+.hero {
+  position: relative;
+  width: clamp(280px, 46vw, 560px);
+  height: auto;
+  overflow: visible;
+  transform-origin: 17.3% 58.5%;
+  will-change: transform;
+}
+
+.roof {
+  fill: #0f1c2b;
+
+  @mixin dark {
+    fill: #ffffff;
+  }
+}
+
+.spin {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.gem {
+  fill: #3fcbb8;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hero[data-spin] .spin {
+  animation: spin 1.3s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+}
+
+.word {
+  font-family: Barlow, system-ui, sans-serif;
+  font-size: 118px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  fill: #0f1c2b;
+
+  @mixin dark {
+    fill: #ffffff;
+  }
+}
+
+.line {
+  font-family: Barlow, system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  fill: #0b8577;
+
+  @mixin dark {
+    fill: #3fcbb8;
+  }
+}
+
+.tagline {
+  font-family: Barlow, system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  fill: #5e5e5d;
+
+  @mixin dark {
+    fill: #cbcbc8;
+  }
+}
+
+/* A quarter turn, then a pause: the diamond falls back on its point each time. */
+@keyframes spin {
+  0% {
+    transform: rotate(0);
+  }
+  60%,
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero[data-spin] .spin {
+    animation: none;
+  }
+}

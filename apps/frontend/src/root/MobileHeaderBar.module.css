@@ -1,0 +1,22 @@
+/*
+ * La barre mobile reprend l'identité du bandeau sombre de PageHeader
+ * (même dégradé bleu nuit et liseré sarcelle Tekad).
+ */
+.bar {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f1c2b 10%, #172a3f 65%, #0f1c2b 40%);
+  color: var(--mantine-color-white);
+}
+
+.bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--mantine-color-tekad-4);
+}
+
+.title {
+  color: var(--mantine-color-white);
+}

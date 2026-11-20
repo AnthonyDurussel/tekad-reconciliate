@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0F1C2B" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>Tekad · Réconciliation des frais</title>
+    <script src="/color-scheme.js"></script>
+    <style>
+      html, body { margin: 0; }
+      /* Same ground as the loading curtain, which takes over as soon as the app starts. */
+      .boot-veil { position: fixed; inset: 0; background: #f3f6f8 radial-gradient(55% 50% at 50% 46%, rgba(63, 203, 184, 0.16), transparent 70%); }
+      [data-mantine-color-scheme="dark"] .boot-veil { background: #0e1620 radial-gradient(55% 50% at 50% 46%, rgba(63, 203, 184, 0.2), transparent 70%); }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div class="boot-veil" role="status" aria-label="Chargement"></div></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

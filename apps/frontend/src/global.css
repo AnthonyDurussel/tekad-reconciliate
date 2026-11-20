@@ -1,0 +1,124 @@
+/*
+ * The ground of the app: a soft teal glow at the top of the screen and faint ledger rings.
+ * Cards are frosted surfaces over it (`.app-surface`, set on every `Card` by `theme.ts`).
+ */
+:root {
+  --app-bg: #f4f6f8;
+  --app-atmos:
+    radial-gradient(
+      ellipse 70% 420px at 85% -120px,
+      rgba(63, 203, 184, 0.13),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 320px at 10% -80px,
+      rgba(11, 133, 119, 0.06),
+      transparent 70%
+    );
+  --app-texture: repeating-radial-gradient(
+    circle at 100% 0,
+    transparent 0 58px,
+    rgba(11, 133, 119, 0.05) 58px 59px,
+    transparent 59px 60px
+  );
+  --app-surface-bg: rgba(255, 255, 255, 0.9);
+  --app-surface-border: rgba(15, 28, 43, 0.08);
+  --app-surface-shadow:
+    0 1px 2px rgba(15, 28, 43, 0.04), 0 10px 28px -18px rgba(15, 28, 43, 0.22);
+  --app-table-head-bg: #f2f5f7;
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --app-bg: var(--mantine-color-dark-8);
+  --app-atmos:
+    radial-gradient(
+      ellipse 70% 420px at 85% -120px,
+      rgba(63, 203, 184, 0.14),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 320px at 10% -80px,
+      rgba(11, 133, 119, 0.06),
+      transparent 70%
+    );
+  --app-texture: repeating-radial-gradient(
+    circle at 100% 0,
+    transparent 0 58px,
+    rgba(157, 230, 220, 0.035) 58px 59px,
+    transparent 59px 60px
+  );
+  --app-surface-bg: rgba(15, 28, 43, 0.86);
+  --app-surface-border: rgba(255, 255, 255, 0.07);
+  --app-surface-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -18px rgba(0, 0, 0, 0.65);
+  --app-table-head-bg: var(--mantine-color-dark-7);
+}
+
+body {
+  background-color: var(--app-bg);
+  background-image: var(--app-atmos), var(--app-texture);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+}
+
+.app-surface {
+  background-color: var(--app-surface-bg);
+  box-shadow: var(--app-surface-shadow);
+  backdrop-filter: blur(8px);
+}
+
+.app-surface[data-with-border] {
+  border-color: var(--app-surface-border);
+}
+
+.app-table-head {
+  background-color: var(--app-table-head-bg);
+}
+
+.app-table-head th {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mantine-color-dimmed);
+  white-space: nowrap;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .mantine-AppShell-navbar,
+  .mantine-AppShell-header {
+    display: none !important;
+  }
+
+  .mantine-AppShell-main {
+    padding: 0 !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .app-surface {
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Séances : ce qui ne paraît qu'à l'impression (texte d'un champ en édition, pied de page). */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block;
+  }
+}
