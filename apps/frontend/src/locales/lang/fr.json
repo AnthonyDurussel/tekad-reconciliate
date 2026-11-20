@@ -110,7 +110,7 @@
   },
   "sync": {
     "title": "Synchronisation",
-    "subtitle": "Inbox bexio → lecture des pièces → transactions Revolut → rapprochement. Chaque nuit, et à la demande.",
+    "subtitle": "Inbox bexio → lecture des pièces → rapprochement, chaque nuit et à la demande. Revolut : importez le relevé CSV.",
     "all": "Tout synchroniser",
     "source": "Étape",
     "lastRun": "Dernier passage",
@@ -124,15 +124,15 @@
     "history": "Derniers passages",
     "service": {
       "bexio": "bexio",
-      "revolut": "Revolut Business",
       "extraction": "Lecture (Claude)"
     },
     "run": {
       "bexio-inbox": "Importer l'inbox bexio",
       "extract": "Lire les pièces",
-      "revolut": "Synchroniser Revolut",
       "match": "Rapprocher"
-    }
+    },
+    "revolutLatest": "Relevé Revolut jusqu'au {{date}}",
+    "revolutNone": "Aucun relevé Revolut importé"
   },
   "expenses": {
     "title": "Pièces",
@@ -320,8 +320,8 @@
         "MANUAL_ENTRY": "L'application passe l'écriture dans bexio, pièce jointe.",
         "BEXIO_RECONCILIATION": "L'écriture naît du rapprochement bancaire dans bexio ; l'application marque la pièce comptabilisée."
       },
-      "revolutAccountId": "Compte Revolut (account_id)",
-      "revolutAccountIdHint": "Identifiant du compte dans Revolut Business : ses transactions sont rattachées à ce compte.",
+      "revolutAccountId": "Compte Revolut (colonne « Account » du relevé)",
+      "revolutAccountIdHint": "Ex. « CHF Main » : les lignes de ce compte dans le relevé CSV lui sont rattachées. Vide : avec un seul compte Revolut, tout le relevé y va.",
       "cards": "Cartes",
       "cardsHint": "Les 4 derniers chiffres lus sur un ticket rattachent la pièce à ce compte.",
       "last4": "4 derniers chiffres",
@@ -459,5 +459,19 @@
       "REVOLUT": "Transactions Revolut",
       "MATCHING": "Rapprochement"
     }
+  },
+  "revolutImport": {
+    "button": "Importer le relevé Revolut (CSV)",
+    "tooLarge": "Fichier trop volumineux (10 Mo au plus).",
+    "done_one": "{{count}} transaction importée",
+    "done_other": "{{count}} transactions importées",
+    "detail": "{{created}} nouvelle(s), {{updated}} mise(s) à jour",
+    "period": "du {{from}} au {{to}}",
+    "matched_one": "{{count}} pièce rapprochée",
+    "matched_other": "{{count}} pièces rapprochées",
+    "errors_one": "{{count}} ligne illisible ({{first}})",
+    "errors_other": "{{count}} lignes illisibles, dont : {{first}}",
+    "failed": "Relevé non importé",
+    "hint": "Revolut Business → Transactions → Relevé → CSV. Réimporter un relevé met à jour sans doublon."
   }
 }

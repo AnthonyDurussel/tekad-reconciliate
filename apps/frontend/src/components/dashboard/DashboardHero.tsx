@@ -24,7 +24,7 @@ export interface HeroGaugeItem {
 /**
  * Le bandeau d'ouverture d'un tableau de bord (repris de stoll) : une phrase
  * qui dit l'essentiel, quelques chiffres sur verre, et des taux en anneaux.
- * Fond bleu nuit de la navigation, accent sarcelle Tekad.
+ * Fond noir de la navigation, accent vert TekAD.
  */
 export function DashboardHero({
   eyebrow,
@@ -46,8 +46,8 @@ export function DashboardHero({
     <div
       className={classes.hero}
       style={{
-        ["--hero-bg" as string]: "#13233a",
-        ["--hero-accent" as string]: "#3fcbb8",
+        ["--hero-bg" as string]: "#15191b",
+        ["--hero-accent" as string]: "#16db65",
       }}
     >
       <Grid p={{ base: "lg", md: "xl" }} gap="xl" align="center" pos="relative">

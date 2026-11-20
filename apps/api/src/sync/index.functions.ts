@@ -13,7 +13,7 @@ import { SYNC_TYPES } from "@/sync/infrastructure/ioc/types.sync.js";
 const controller = (c: Container) =>
   c.get<SyncController>(SYNC_TYPES.SyncController);
 
-/** Les imports appellent bexio, Revolut et Claude : hors transaction. */
+/** Les imports appellent bexio et Claude : hors transaction. */
 export function registerSyncRoutes(app: HttpRouteRegistrar) {
   route(app, {
     name: "getSyncStatus",
@@ -34,7 +34,7 @@ export function registerSyncRoutes(app: HttpRouteRegistrar) {
   const post = (
     name: string,
     path: string,
-    action: "bexioInbox" | "extract" | "revolut" | "match" | "all",
+    action: "bexioInbox" | "extract" | "revolutImport" | "match" | "all",
   ) =>
     route(app, {
       name,
@@ -46,7 +46,17 @@ export function registerSyncRoutes(app: HttpRouteRegistrar) {
     });
   post("syncBexioInbox", "sync/bexio-inbox", "bexioInbox");
   post("syncExtract", "sync/extract", "extract");
-  post("syncRevolut", "sync/revolut", "revolut");
+  // Relevé exporté de Revolut Business (CSV) ; dans une transaction : tout
+  // ou rien, rapprochement compris.
+  route(app, {
+    name: "importRevolutStatement",
+    methods: ["POST"],
+    path: "revolut/import",
+    access: PermissionDTO.SYNC_RUN,
+    tx: true,
+    timeout: 120_000,
+    handler: (c, r) => controller(c).revolutImport(r),
+  });
   post("syncMatch", "sync/match", "match");
   post("syncAll", "sync/all", "all");
 }

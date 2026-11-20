@@ -110,7 +110,7 @@
   },
   "sync": {
     "title": "Synchronisation",
-    "subtitle": "bexio inbox → receipt reading → Revolut transactions → matching. Every night, and on demand.",
+    "subtitle": "bexio inbox → receipt reading → matching, nightly and on demand. Revolut: import the CSV statement.",
     "all": "Sync everything",
     "source": "Step",
     "lastRun": "Last run",
@@ -124,15 +124,15 @@
     "history": "Latest runs",
     "service": {
       "bexio": "bexio",
-      "revolut": "Revolut Business",
       "extraction": "Reading (Claude)"
     },
     "run": {
       "bexio-inbox": "Import the bexio inbox",
       "extract": "Read receipts",
-      "revolut": "Sync Revolut",
       "match": "Match"
-    }
+    },
+    "revolutLatest": "Revolut statement up to {{date}}",
+    "revolutNone": "No Revolut statement imported"
   },
   "expenses": {
     "title": "Receipts",
@@ -320,8 +320,8 @@
         "MANUAL_ENTRY": "The application posts the entry in bexio, receipt attached.",
         "BEXIO_RECONCILIATION": "The entry comes from the bank reconciliation in bexio; the application marks the receipt booked."
       },
-      "revolutAccountId": "Revolut account (account_id)",
-      "revolutAccountIdHint": "Account id in Revolut Business: its transactions belong to this account.",
+      "revolutAccountId": "Revolut account (statement « Account » column)",
+      "revolutAccountIdHint": "E.g. « CHF Main »: statement rows of this account belong here. Empty: with a single Revolut account, the whole statement goes to it.",
       "cards": "Cards",
       "cardsHint": "The last 4 digits read on a receipt assign it to this account.",
       "last4": "Last 4 digits",
@@ -459,5 +459,19 @@
       "REVOLUT": "Revolut transactions",
       "MATCHING": "Matching"
     }
+  },
+  "revolutImport": {
+    "button": "Import Revolut statement (CSV)",
+    "tooLarge": "File too large (10 MB max).",
+    "done_one": "{{count}} transaction imported",
+    "done_other": "{{count}} transactions imported",
+    "detail": "{{created}} new, {{updated}} updated",
+    "period": "from {{from}} to {{to}}",
+    "matched_one": "{{count}} receipt matched",
+    "matched_other": "{{count}} receipts matched",
+    "errors_one": "{{count}} unreadable line ({{first}})",
+    "errors_other": "{{count}} unreadable lines, e.g. {{first}}",
+    "failed": "Statement not imported",
+    "hint": "Revolut Business → Transactions → Statement → CSV. Re-importing updates without duplicates."
   }
 }

@@ -1,8 +1,4 @@
-import type {
-  RevolutSyncRequestDTO,
-  SyncRunDTO,
-  SyncStatusDTO,
-} from "@repo/models";
+import type { SyncRunDTO, SyncStatusDTO } from "@repo/models";
 import { baseApi } from "./baseApi";
 
 /** Une synchronisation peut tout changer : pièces, transactions, chiffres. */
@@ -14,7 +10,7 @@ const AFFECTED = [
   "Dashboard",
 ] as const;
 
-export type SyncTarget = "bexio-inbox" | "extract" | "revolut" | "match";
+export type SyncTarget = "bexio-inbox" | "extract" | "match";
 
 export const syncApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -26,14 +22,11 @@ export const syncApi = baseApi.injectEndpoints({
       query: () => "sync/runs",
       providesTags: ["Sync"],
     }),
-    runSync: build.mutation<
-      SyncRunDTO,
-      { target: SyncTarget; body?: RevolutSyncRequestDTO }
-    >({
-      query: ({ target, body }) => ({
+    runSync: build.mutation<SyncRunDTO, { target: SyncTarget }>({
+      query: ({ target }) => ({
         url: `sync/${target}`,
         method: "POST",
-        body: body ?? {},
+        body: {},
       }),
       invalidatesTags: [...AFFECTED],
     }),

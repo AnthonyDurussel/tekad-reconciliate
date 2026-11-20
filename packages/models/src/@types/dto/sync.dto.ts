@@ -1,6 +1,7 @@
 export enum SyncSourceDTO {
   BEXIO_INBOX = "BEXIO_INBOX",
   EXTRACTION = "EXTRACTION",
+  /** Import d'un relevé Revolut Business (CSV). */
   REVOLUT = "REVOLUT",
   MATCHING = "MATCHING",
 }
@@ -20,13 +21,8 @@ export interface SyncRunDTO {
 /** `GET sync/status` : ce qui est configuré, et le dernier passage par source. */
 export interface SyncStatusDTO {
   bexioConfigured: boolean;
-  revolutConfigured: boolean;
   extractionConfigured: boolean;
+  /** Date de la transaction Revolut la plus récente importée (`null` : aucun relevé). */
+  revolutLatestTransaction: string | null;
   last: Partial<Record<SyncSourceDTO, SyncRunDTO>>;
-}
-
-/** `POST sync/revolut` : période à relire (défaut : depuis le dernier passage, 3 jours de marge). */
-export interface RevolutSyncRequestDTO {
-  from?: string | null;
-  to?: string | null;
 }

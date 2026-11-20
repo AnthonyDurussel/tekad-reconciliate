@@ -165,10 +165,6 @@ Prérequis : propriétaire de l'abonnement, `az login`, `gh auth login` (admin d
    ACS_ACCESS_KEY=<clé d'accès de la ressource Communication Services>
    # réconciliation (facultatifs : sans eux, la source correspondante répond 409)
    BEXIO_API_TOKEN=<jeton personnel bexio : fichiers + comptabilité>
-   REVOLUT_CLIENT_ID=<client id de l'API Revolut Business>
-   REVOLUT_PRIVATE_KEY=<clé privée PEM du certificat, retours à la ligne en \n>
-   REVOLUT_ISSUER=<domaine de l'URI de redirection déclarée avec le certificat>
-   REVOLUT_REFRESH_TOKEN=<refresh token obtenu au consentement>
    ANTHROPIC_API_KEY=<clé API Claude, lecture des pièces>
    # comptes : vérification du tenant Entra ID du domaine (facultatif : sans elles, rien n'est vérifié)
    ENTRA_GRAPH_CLIENT_ID=<id d'application (client) de l'inscription Graph>

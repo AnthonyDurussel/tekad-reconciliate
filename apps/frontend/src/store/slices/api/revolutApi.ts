@@ -1,5 +1,7 @@
 import type {
   IgnoreDTO,
+  RevolutImportDTO,
+  RevolutImportResultDTO,
   RevolutTransactionDTO,
   RevolutTransactionQueryDTO,
 } from "@repo/models";
@@ -35,10 +37,25 @@ export const revolutApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["RevolutTransaction", "Candidates", "Dashboard"],
     }),
+    /** Relevé exporté de Revolut Business (CSV), puis rapprochement. */
+    importRevolutStatement: build.mutation<
+      RevolutImportResultDTO,
+      RevolutImportDTO
+    >({
+      query: (body) => ({ url: "revolut/import", method: "POST", body }),
+      invalidatesTags: [
+        "Sync",
+        "Expense",
+        "Candidates",
+        "RevolutTransaction",
+        "Dashboard",
+      ],
+    }),
   }),
 });
 
 export const {
+  useImportRevolutStatementMutation,
   useGetRevolutTransactionsQuery,
   useIgnoreRevolutTransactionMutation,
   useRestoreRevolutTransactionMutation,

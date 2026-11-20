@@ -36,16 +36,18 @@ import {
   type SyncTarget,
 } from "@/store/slices/api";
 import { getErrorMessage } from "@/utils/apiError";
-import { formatDateTime } from "@/utils/format";
+import { formatDate, formatDateTime } from "@/utils/format";
+import RevolutImportButton from "@/components/revolut/RevolutImportButton";
 
 type SourceRow = {
   source: SyncSourceDTO;
-  target: SyncTarget;
+  /** Absent : l'étape ne se lance pas d'ici (relevé Revolut : un fichier). */
+  target?: SyncTarget;
   icon: typeof IconInbox;
   configured: (status: SyncStatusDTO) => boolean;
 };
 
-/** Les quatre étapes, dans l'ordre de `sync/all`. */
+/** Les étapes : celles de `sync/all`, et l'import du relevé Revolut. */
 const SOURCES: SourceRow[] = [
   {
     source: SyncSourceDTO.BEXIO_INBOX,
@@ -61,9 +63,8 @@ const SOURCES: SourceRow[] = [
   },
   {
     source: SyncSourceDTO.REVOLUT,
-    target: "revolut",
     icon: IconCreditCard,
-    configured: (s) => s.revolutConfigured,
+    configured: () => true,
   },
   {
     source: SyncSourceDTO.MATCHING,
@@ -160,10 +161,7 @@ export default function SyncPanel() {
   };
 
   const anyConfigured =
-    !!status &&
-    (status.bexioConfigured ||
-      status.revolutConfigured ||
-      status.extractionConfigured);
+    !!status && (status.bexioConfigured || status.extractionConfigured);
 
   return (
     <DashboardCard
@@ -190,7 +188,6 @@ export default function SyncPanel() {
             {(
               [
                 ["bexio", status.bexioConfigured],
-                ["revolut", status.revolutConfigured],
                 ["extraction", status.extractionConfigured],
               ] as const
             ).map(([key, ok]) => (
@@ -209,6 +206,17 @@ export default function SyncPanel() {
                 </Badge>
               </Tooltip>
             ))}
+            <Badge
+              variant="light"
+              color={status.revolutLatestTransaction ? "teal" : "orange"}
+              leftSection={<IconCreditCard size={12} />}
+            >
+              {status.revolutLatestTransaction
+                ? t("sync.revolutLatest", {
+                    date: formatDate(status.revolutLatestTransaction),
+                  })
+                : t("sync.revolutNone")}
+            </Badge>
           </Group>
           <Table.ScrollContainer minWidth={620}>
             <Table verticalSpacing="sm">
@@ -242,15 +250,21 @@ export default function SyncPanel() {
                       </Table.Td>
                       {canRun && (
                         <Table.Td>
-                          <Button
-                            size="xs"
-                            variant="default"
-                            disabled={!ok || runningAll}
-                            loading={running && originalArgs?.target === target}
-                            onClick={() => start(target)}
-                          >
-                            {t(`sync.run.${target}`)}
-                          </Button>
+                          {target ? (
+                            <Button
+                              size="xs"
+                              variant="default"
+                              disabled={!ok || runningAll}
+                              loading={
+                                running && originalArgs?.target === target
+                              }
+                              onClick={() => start(target)}
+                            >
+                              {t(`sync.run.${target}`)}
+                            </Button>
+                          ) : (
+                            <RevolutImportButton size="xs" variant="default" />
+                          )}
                         </Table.Td>
                       )}
                     </Table.Tr>

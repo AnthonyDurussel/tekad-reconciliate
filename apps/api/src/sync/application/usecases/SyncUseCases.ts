@@ -1,11 +1,12 @@
 import { inject, injectable } from "inversify";
 import {
   SyncSourceDTO,
+  type RevolutImportDTO,
+  type RevolutImportResultDTO,
   type SyncRunDTO,
   type SyncStatusDTO,
 } from "@repo/models";
 import { ConflictError } from "@/shared/domain/errors.js";
-import { dayToDate } from "@/shared/domain/dates.js";
 import { log } from "@/shared/infrastructure/logging/logger.js";
 import type { ISyncRunRepository } from "@/sync/application/repositories/ISyncRunRepository.js";
 import { SYNC_TYPES } from "@/sync/infrastructure/ioc/types.sync.js";
@@ -16,8 +17,9 @@ import { REVOLUT_TYPES } from "@/revolut/infrastructure/ioc/types.revolut.js";
 
 /**
  * Les synchronisations, journalisées dans `sync_runs` : inbox bexio →
- * lecture des pièces → transactions Revolut → rapprochement. Une source non
- * configurée répond 409 sans laisser de trace.
+ * lecture des pièces → rapprochement, et l'import des relevés Revolut
+ * (fichier exporté de Revolut Business, l'abonnement n'ouvrant pas l'API).
+ * Une source non configurée répond 409 sans laisser de trace.
  */
 @injectable()
 export class SyncUseCases {
@@ -30,8 +32,9 @@ export class SyncUseCases {
   async status(): Promise<SyncStatusDTO> {
     return {
       bexioConfigured: this.expenses.bexioConfigured,
-      revolutConfigured: this.revolut.configured,
       extractionConfigured: this.expenses.readerConfigured,
+      revolutLatestTransaction:
+        (await this.revolut.latestTransaction())?.toISOString() ?? null,
       last: await this.runs.lastBySource(),
     };
   }
@@ -47,7 +50,6 @@ export class SyncUseCases {
       case SyncSourceDTO.EXTRACTION:
         return this.expenses.bexioConfigured && this.expenses.readerConfigured;
       case SyncSourceDTO.REVOLUT:
-        return this.revolut.configured;
       case SyncSourceDTO.MATCHING:
         return true;
     }
@@ -85,13 +87,43 @@ export class SyncUseCases {
     );
   }
 
-  revolutSync(userId: string | null, from?: string | null, to?: string | null) {
-    const end = to
-      ? new Date(dayToDate(to)!.getTime() + 86_400_000)
-      : undefined;
-    return this.run(SyncSourceDTO.REVOLUT, userId, () =>
-      this.revolut.sync(dayToDate(from) ?? undefined, end),
-    );
+  /**
+   * Importe un relevé Revolut puis rapproche les pièces en attente. Un
+   * fichier illisible répond 400 (rien n'est journalisé).
+   */
+  async revolutImport(
+    userId: string | null,
+    input: RevolutImportDTO,
+  ): Promise<RevolutImportResultDTO> {
+    const id = await this.runs.start(SyncSourceDTO.REVOLUT, userId);
+    try {
+      const result = await this.revolut.importStatement(
+        input.content,
+        input.paymentAccountId ?? null,
+      );
+      const matched = await this.expenses.autoMatchAll();
+      await this.runs.finish(
+        id,
+        true,
+        result.created,
+        [
+          input.fileName,
+          `${result.created} nouvelle(s), ${result.updated} mise(s) à jour`,
+          result.from && `du ${result.from} au ${result.to}`,
+          `${matched} pièce(s) rapprochée(s)`,
+          result.errors.length &&
+            `${result.errors.length} ligne(s) illisible(s)`,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      );
+      return { ...result, matched };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message.slice(0, 500) : "échec";
+      await this.runs.finish(id, false, 0, message);
+      throw error;
+    }
   }
 
   match(userId: string | null) {
@@ -100,15 +132,13 @@ export class SyncUseCases {
     );
   }
 
-  /** Tout ce qui est configuré, dans l'ordre. */
+  /** Tout ce qui est configuré, dans l'ordre (le relevé Revolut s'importe à part). */
   async all(userId: string | null): Promise<SyncRunDTO[]> {
     const results: SyncRunDTO[] = [];
     if (this.configured(SyncSourceDTO.BEXIO_INBOX))
       results.push(await this.bexioInbox(userId));
     if (this.configured(SyncSourceDTO.EXTRACTION))
       results.push(await this.extract(userId));
-    if (this.configured(SyncSourceDTO.REVOLUT))
-      results.push(await this.revolutSync(userId));
     results.push(await this.match(userId));
     return results;
   }

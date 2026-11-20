@@ -9,15 +9,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 the **bexio inbox**; the app imports it, **reads it** (Claude vision: merchant, date, amount, VAT,
 **the last 4 digits of the card**), **classifies it by payment account** from the card, proposes an
 **expense type** and the **bexio booking** (debit expense account / credit payment account / VAT
-code), **matches Revolut receipts with the Revolut Business transactions** and lists the **Revolut
-debits without a receipt** (receipts to ask for). UBS reconciliation stays in bexio (bank
+code), **matches Revolut receipts with the Revolut Business transactions** — imported from the **CSV
+statement exported from Revolut Business** (the subscription has no API access) — and lists the
+**Revolut debits without a receipt** (receipts to ask for). UBS reconciliation stays in bexio (bank
 reconciliation): for UBS the app only proposes the booking.
 
 Same architecture as `famsa-desk` (forked from it): a **pnpm + Turbo monorepo** (`pnpm@12`,
 Node ≥ 22, `minimumReleaseAge` 24 h) with three workspaces:
 
 - `apps/api` — backend on **Azure Functions** (TypeScript, ESM, Inversify, Prisma + PostgreSQL). Hexagonal/DDD. Bundled with esbuild.
-- `apps/frontend` — **React 19 + Vite + Mantine + Redux Toolkit (RTK Query)** SPA.
+- `apps/frontend` — **React 19 + Vite + Mantine + Redux Toolkit (RTK Query)** SPA, TekAD branding (www.tekad.ch: logo « TEK/D » with the green stroke `#16DB65`, black `#0D1012`; action green `#0A9E46`; Barlow).
 - `packages/models` — `@repo/models`: DTOs, Yup request schemas, roles/permissions and **the pure reconciliation rules** (`utils/reconciliation.ts`), consumed by both apps **from its compiled `dist/`** — run `pnpm build` there after any change.
 
 UI language is **French** (i18n fr + en).
@@ -33,10 +34,10 @@ Revolut / Claude, `ioc/` bindings), `index.functions.ts` (routes). Use cases onl
 | `user`            | accounts, roles, Entra access (from famsa-desk)                                                                                            |
 | `settings`        | payment accounts + cards, expense types (`IPaymentAccountRepository`, `IExpenseCategoryRepository`)                                        |
 | `expense`         | receipts: import, extraction, classification, matching, booking (`IExpenseRepository`)                                                    |
-| `revolut`         | Revolut transactions (`IRevolutTransactionRepository`), port `IRevolutGateway`, adapter `RevolutBusinessGateway`                           |
+| `revolut`         | Revolut transactions (`IRevolutTransactionRepository`), CSV statement import (`domain/RevolutStatement.ts`, pure parser)                   |
 | `bexio`           | port `IBexioGateway` (inbox files, download, accounts, taxes, manual entries + attachment), adapter `BexioHttpGateway`                     |
 | `extraction`      | port `IReceiptReader`, adapter `ClaudeReceiptReader` (Anthropic SDK, structured output)                                                    |
-| `sync`            | orchestration: `SyncUseCases` (inbox → extraction → Revolut → matching), `sync_runs` log, nightly timer                                   |
+| `sync`            | orchestration: `SyncUseCases` (inbox → extraction → matching; Revolut statement import + matching), `sync_runs` log, nightly timer        |
 | `dashboard`       | aggregates per status / account / type, missing receipts                                                                                   |
 | `config`          | backend info                                                                                                                               |
 | `notification`    | e-mails (invitation)                                                                                                                       |
@@ -52,7 +53,7 @@ answer 409 — never a 500.
 | Carte: last 4 digits, unique; the card read on a receipt gives its payment account (`accountForCard()`)                                                                                                                     | `payment_cards`                                          |
 | Type de dépense: code, label, expense account (`6570`…), bexio `tax_id`, VAT rate, **keywords** and **MCC codes** (`categoryByRules()`)                                                                                     | `expense_categories`, `ExpenseCategoryDTO`               |
 | Pièce: one bexio inbox file; extraction, account (+ source CARD / TRANSACTION / MANUAL), type (+ source RULE / AI / MANUAL), booking overrides, Revolut transaction, bexio entry                                             | `expenses`, `ExpenseDTO`, `Expense` (domain)             |
-| Transaction Revolut: one leg on a company account; `requiresReceipt()` (debit, completed/pending, not exchange/fee/topup/refund); may be ignored (« pas de pièce ») with a reason                                            | `revolut_transactions`, `RevolutTransactionDTO`          |
+| Transaction Revolut: one statement row (ID + `Account`); `requiresReceipt()` (debit, completed/pending, not exchange/fee/topup/refund); may be ignored (« pas de pièce ») with a reason                                    | `revolut_transactions`, `RevolutTransactionDTO`          |
 
 Status (`expenseStatus()`): `NEW` (not read) → `TO_REVIEW` / `READY` (computed: date, amount,
 payment account, type, and **for Revolut the matched transaction**) → `BOOKED`; `IGNORED` aside.
@@ -60,6 +61,16 @@ Precedence: a MANUAL value is never overwritten by a re-extraction or a sync.
 
 Classification order for the payment account: card on the receipt → the matched Revolut
 transaction's account → manual. Type: keyword/MCC rule → Claude's proposal (`categoryCode`) → manual.
+
+Revolut statement (`parseRevolutStatement()`): Revolut Business → Transactions → Statement → CSV.
+Columns found by name (English export: `Date started (UTC)`, `Date completed (UTC)`, `ID`, `Type`,
+`State`, `Description` = merchant, `Card number` `516760******4721`, `Orig currency` / `Orig amount`
+(unsigned), `Payment currency`, `Amount`, `Total amount` = Amount + Fee, `Account` « CHF Main »,
+`MCC`; French headers, `;` and `jj.mm.aaaa` tolerated). Amount kept = `Total amount` (what left the
+account); `Orig amount` in its currency = `billAmount` for matching. Unique (ID, Account): re-importing
+or overlapping statements updates, never duplicates. Rows go to the payment account whose
+`revolutAccountId` equals `Account` (case-insensitive), else the one chosen, else the only active
+Revolut account. The import then runs the matching.
 
 Matching (`scoreMatch()`, `autoMatch()`): amount is mandatory (account amount, or bill amount in the
 receipt currency, ±0.01), date ≤ 5 days, card, merchant similarity; auto-match at ≥ 70 points and
@@ -105,7 +116,8 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `POST revolut/transactions/{id}/ignore`, `/restore`                                          | `EXPENSE_MANAGE`                   | `IgnoreDTO` → `RevolutTransactionDTO`                             |
 | `GET dashboard?from&to`                                                                      | `EXPENSE_VIEW`                     | `DashboardDTO`                                                    |
 | `GET sync/status`, `GET sync/runs`                                                           | `EXPENSE_VIEW`                     | `SyncStatusDTO` / `SyncRunDTO[]` (50 last)                        |
-| `POST sync/bexio-inbox`, `POST sync/extract`, `POST sync/revolut`, `POST sync/match`, `POST sync/all` | `SYNC_RUN`                | → `SyncRunDTO` (`sync/all` → `SyncRunDTO[]`); 409 if not configured |
+| `POST revolut/import`                                                                        | `SYNC_RUN`                         | `RevolutImportDTO` (CSV text, ≤ 10 MB) → `RevolutImportResultDTO`; 400 if unreadable |
+| `POST sync/bexio-inbox`, `POST sync/extract`, `POST sync/match`, `POST sync/all`             | `SYNC_RUN`                         | → `SyncRunDTO` (`sync/all` → `SyncRunDTO[]`); 409 if not configured |
 
 Timer `nightlySync` (05:15 UTC, `SYNC_CRON` overrides): `sync/all` when configured.
 
@@ -113,7 +125,7 @@ Timer `nightlySync` (05:15 UTC, `SYNC_CRON` overrides): `sync/all` when configur
 
 - `DATABASE_URL` (local) / `DATABASE_ENTRA_URL` (Azure).
 - bexio: `BEXIO_API_TOKEN` (personal access token, scopes: `file`, `accounting`, `kb_*` read), `BEXIO_API_URL` (default `https://api.bexio.com`).
-- Revolut Business: `REVOLUT_CLIENT_ID`, `REVOLUT_PRIVATE_KEY` (PEM, `\n` escaped), `REVOLUT_ISSUER` (the redirect-URI domain declared on the certificate), `REVOLUT_REFRESH_TOKEN`, `REVOLUT_API_URL` (default `https://b2b.revolut.com/api/1.0`; sandbox `https://sandbox-b2b.revolut.com/api/1.0`).
+- Revolut: nothing — the statement is uploaded (`POST revolut/import`).
 - Claude: `ANTHROPIC_API_KEY`, `RECEIPT_MODEL` (default `claude-opus-5-5`).
 
 ## Frontend screens
@@ -122,7 +134,7 @@ Timer `nightlySync` (05:15 UTC, `SYNC_CRON` overrides): `sync/all` when configur
 Revolut receipts, last syncs + sync buttons); `/expenses` « Pièces » (filters: period, **payment
 account**, **type**, status, search — kept in the URL; table with account / type / booking / status;
 Excel); `/expenses/:id` (receipt preview, extracted fields, account & type, booking proposal,
-Revolut match + candidates, actions); `/revolut` « Revolut » (transactions; tab **Pièces manquantes**);
+Revolut match + candidates, actions); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
 `/admin/accounts` « Comptes et cartes », `/admin/categories` « Types de dépense », `/admin/users`.
 Home: `/dashboard`.
 

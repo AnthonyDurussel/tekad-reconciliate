@@ -34,3 +34,29 @@ export interface RevolutTransactionQueryDTO {
   filter?: "all" | "missing" | "matched" | "ignored";
   search?: string;
 }
+
+/**
+ * `POST revolut/import` : le relevé exporté de Revolut Business (CSV, texte).
+ * `paymentAccountId` : le compte de paiement des lignes dont le compte
+ * Revolut (colonne « Account ») n'est rattaché à aucun ; défaut : le seul
+ * compte Revolut actif.
+ */
+export interface RevolutImportDTO {
+  fileName?: string | null;
+  content: string;
+  paymentAccountId?: string | null;
+}
+
+export interface RevolutImportResultDTO {
+  /** Lignes lues dans le fichier. */
+  rows: number;
+  created: number;
+  updated: number;
+  /** Lignes illisibles, avec la raison (ligne n : …). */
+  errors: string[];
+  /** Période couverte par le relevé (`YYYY-MM-DD`). */
+  from: string | null;
+  to: string | null;
+  /** Pièces rapprochées automatiquement après l'import. */
+  matched: number;
+}

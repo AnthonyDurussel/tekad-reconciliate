@@ -1,6 +1,6 @@
 /**
  * The Tekad mark's pass on the loading curtain: the roof (the receipt) drops into place like
- * a slip printed by a till, the teal diamond lands under it with a turn, and the
+ * a slip printed by a till, the green stroke of the A lands with a turn, and the
  * wordmark is revealed beside it; the diamond keeps turning while loading lasts, then we dive
  * through the diamond while the veil opens.
  *
@@ -19,7 +19,7 @@ export interface CurtainElements {
   hero: Element;
   /** The roof, the receipt of the mark, dropped in from above. */
   roof: Element;
-  /** The teal diamond, which lands with a turn and spins while waiting. */
+  /** The green stroke of the A, which lands with a turn and spins while waiting. */
   gem: Element;
   /** « Tekad » and « bexio · Revolut · UBS ». */
   word: Element;

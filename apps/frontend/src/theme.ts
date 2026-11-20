@@ -15,43 +15,43 @@ import {
 import { DiamondLoader } from "./components/loading/DiamondLoader";
 
 /**
- * Charte Tekad · Réconciliation des frais : un sarcelle profond (`#0B8577`,
- * nuance 7) pour l'action, sur une encre bleu nuit (`#0F1C2B`) pour la
- * navigation et les bandeaux — sobre, lisible, « finance ». Inter n'est pas
- * chargée : Barlow, grotesque libre aux chiffres nets, porte l'interface.
+ * Charte TekAD (www.tekad.ch) : le vert de la barre du logo (`#16DB65`,
+ * nuance 5) pour l'accent, une nuance plus profonde (`#0A9E46`, nuance 7)
+ * pour l'action sur fond clair, et le noir du site (`#0D1012`) pour la
+ * navigation et les bandeaux. Barlow porte l'interface.
  */
 const tekad: MantineColorsTuple = [
-  "#e6fbf8",
-  "#cdf3ee",
-  "#9de6dc",
-  "#69d8c9",
-  "#3fcbb8",
-  "#24c1ad",
-  "#0f9e8e",
-  "#0b8577",
-  "#076c61",
-  "#03564d",
+  "#e8fcf0",
+  "#c9f6da",
+  "#97eeb8",
+  "#5fe593",
+  "#33de74",
+  "#16db65",
+  "#0fbf55",
+  "#0a9e46",
+  "#077f38",
+  "#04622b",
 ];
 
-/** Encre bleu nuit de la navigation et des bandeaux. */
+/** Le noir TekAD de la navigation et des bandeaux. */
 const slate: MantineColorsTuple = [
-  "#f2f5f8",
-  "#e2e8ee",
-  "#c5d0db",
-  "#a5b4c3",
-  "#8698ab",
-  "#687d93",
-  "#4d6178",
-  "#34475d",
-  "#1d3047",
-  "#0f1c2b",
+  "#f4f5f5",
+  "#e4e6e7",
+  "#c8cccd",
+  "#a9afb1",
+  "#8b9295",
+  "#6e7679",
+  "#52595c",
+  "#373d40",
+  "#1f2426",
+  "#0d1012",
 ];
 
 export const BRAND = {
-  primary: "#0B8577",
-  primaryLight: "#3FCBB8",
-  text: "#1b2733",
-  ink: "#0F1C2B",
+  primary: "#0A9E46",
+  primaryLight: "#16DB65",
+  text: "#16191b",
+  ink: "#0D1012",
 };
 
 export const theme = createTheme({
@@ -63,7 +63,7 @@ export const theme = createTheme({
   },
   colors: { tekad, slate },
   primaryColor: "tekad",
-  primaryShade: { light: 7, dark: 6 },
+  primaryShade: { light: 7, dark: 5 },
   autoContrast: true,
   luminanceThreshold: 0.45,
   defaultRadius: "md",

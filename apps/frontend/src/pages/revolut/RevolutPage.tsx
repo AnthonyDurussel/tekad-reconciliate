@@ -35,6 +35,7 @@ import {
 import Page from "@/components/Page";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import PeriodPicker from "@/components/PeriodPicker";
+import RevolutImportButton from "@/components/revolut/RevolutImportButton";
 import IgnoreModal from "@/components/expense/IgnoreModal";
 import usePermissions from "@/hooks/usePermissions";
 import {
@@ -136,6 +137,9 @@ export default function RevolutPage() {
         title={t("revolut.title")}
         subtitle={t("revolut.subtitle")}
         count={transactions.length}
+        actions={
+          can(PermissionDTO.SYNC_RUN) && <RevolutImportButton variant="white" />
+        }
       />
       <Group gap="sm" mb="md" align="flex-end" wrap="wrap">
         <PeriodPicker

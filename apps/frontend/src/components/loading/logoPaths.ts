@@ -1,16 +1,16 @@
 /**
- * The Tekad mark as path data, so that the loading curtain can animate its parts: the roof
- * (a receipt, its torn edge pointing down) and the gem (the teal diamond under it — the receipt
- * meets its transaction). The wordmark is drawn as text by `LoadingCurtainHost`. Coordinates
- * are those of `public/logo-tekad.svg`.
+ * The TekAD logo (www.tekad.ch, `public/logo-tekad-white.svg`) as path data, so that the
+ * loading curtain can animate its parts: the letters (« roof ») and the green stroke of the A
+ * (« gem »). Coordinates are those of the logo's 533 × 153 box.
  */
 
-/** The receipt, with three lines cut out (even-odd fill). */
+/** T, E, K, the A's left leg and the D. */
 export const ROOF_PATH =
-  "M84,0 L152,0 Q158,0 158,6 L158,76 L153,84 L148,76 L143,84 L138,76 L133,84 L128,76 L123,84 L118,76 L113,84 L108,76 L103,84 L98,76 L93,84 L88,76 L83,84 L78,76 L78,6 Q78,0 84,0 Z M92,16 L144,16 L144,25 L92,25 Z M92,35 L144,35 L144,44 L92,44 Z M92,54 L126,54 L126,63 L92,63 Z";
+  "M234.724 1V147H217.43V1H234.724ZM313.487 1L259.276 69.0865L228.81 104.484L225.942 83.8269L248.882 55.5495L292.699 1H313.487ZM296.821 147L248.523 75.8049L258.828 60.4629L317.43 147H296.821Z M200.43 131.149V147H131.442V131.149H200.43ZM134.932 0V147H117.663V0H134.932ZM191.303 63.2019V79.0529H131.442V63.2019H191.303ZM199.535 0V15.9519H131.442V0H199.535Z M58.7871 0V147H41.7862V0H58.7871ZM100.663 0V15.9519H0V0H100.663Z M458.537 1.00011C478.031 1.00011 496.726 8.74383 510.51 22.5278C524.293 36.3117 532.037 55.0067 532.037 74.5001C532.037 93.9935 524.294 112.689 510.51 126.472C496.726 140.256 478.031 148 458.537 148L458.537 133.3C474.132 133.3 489.088 127.105 500.115 116.078C511.142 105.051 517.337 90.0948 517.337 74.5001C517.337 58.9054 511.142 43.9494 500.115 32.9222C489.088 21.8951 474.132 15.7001 458.537 15.7001V1.00011Z M448.862 133.3H459.887V148H454.037L448.862 133.3Z M402 1H459V15.7H407.816L402 1Z M336 147H316.5L373.117 1H392.56L336 147Z";
 
+/** The green stroke of the A. */
 export const GEM_PATH =
-  "M118.383,84.871 L148.045,114.534 L118.383,144.196 L88.721,114.534 L118.383,84.871 z";
+  "M397.537 8.50011L448.5 148L430.5 148L388.365 30.1181L397.537 8.50011Z";
 
-/** Centre of the diamond. */
-export const GEM_CENTRE = { x: 118.383, y: 114.534 } as const;
+/** The logo's box. */
+export const LOGO_VIEWBOX = "0 0 533 153";

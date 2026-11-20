@@ -4,7 +4,7 @@ import type {
   MatchExpenseDTO,
   UpdateExpenseDTO,
 } from "../@types/dto/expense.dto.js";
-import type { RevolutSyncRequestDTO } from "../@types/dto/sync.dto.js";
+import type { RevolutImportDTO } from "../@types/dto/revolut.dto.js";
 import {
   optionalDay,
   optionalId,
@@ -56,5 +56,14 @@ export const ignoreSchema: ObjectSchema<IgnoreDTO> = strictObject({
   reason: optionalText(500),
 });
 
-export const revolutSyncSchema: ObjectSchema<RevolutSyncRequestDTO> =
-  strictObject({ from: optionalDay(), to: optionalDay() });
+/** 10 Mo de texte : plusieurs années de relevé. */
+export const MAX_STATEMENT_LENGTH = 10_000_000;
+
+export const revolutImportSchema: ObjectSchema<RevolutImportDTO> = strictObject({
+  fileName: string().trim().max(255).nullable().optional(),
+  content: string()
+    .min(1, "fichier vide")
+    .max(MAX_STATEMENT_LENGTH, "fichier trop volumineux (10 Mo au plus)")
+    .required(),
+  paymentAccountId: optionalId(),
+});

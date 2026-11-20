@@ -17,12 +17,12 @@ export interface IRevolutTransactionRepository {
   findByExpense(expenseId: string): Promise<RevolutTransactionProps | null>;
   findByIds(ids: string[]): Promise<RevolutTransactionProps[]>;
   /**
-   * Insère ou met à jour (état, montants…) sans toucher au rapprochement ni
-   * à la dispense ; rend le nombre de lignes nouvelles.
+   * Insère ou met à jour (état, montants, compte de paiement…) sans toucher
+   * au rapprochement ni à la dispense.
    */
-  upsertMany(rows: RevolutTransactionImport[]): Promise<number>;
-  /** Rattache les transactions d'un compte Revolut à son compte de paiement. */
-  linkPaymentAccounts(map: Map<string, string>): Promise<void>;
+  upsertMany(
+    rows: (RevolutTransactionImport & { paymentAccountId: string | null })[],
+  ): Promise<{ created: number; updated: number }>;
   /** Transactions libres (sans pièce, non ignorées, à justifier) d'une période. */
   listUnmatched(from: Date, to: Date): Promise<RevolutTransactionProps[]>;
   setExpense(id: string, expenseId: string | null): Promise<void>;
@@ -33,6 +33,6 @@ export interface IRevolutTransactionRepository {
     ignored: boolean,
     reason: string | null,
   ): Promise<void>;
-  /** Le dernier jour couvert par une transaction lue (reprise de la synchronisation). */
+  /** La transaction la plus récente importée. */
   latestOccurredAt(): Promise<Date | null>;
 }

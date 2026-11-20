@@ -17,7 +17,7 @@ import { useOptionalMobileHeader } from "@/root/MobileHeaderContext";
 import classes from "./PageHeader.module.css";
 
 export interface PageHeaderProps {
-  /** L'icône de la page, dans sa pastille sarcelle. */
+  /** L'icône de la page, dans sa pastille verte. */
   icon: ReactNode;
   title: string;
   /** Une phrase sous le titre : ce qu'on fait sur cette page. */

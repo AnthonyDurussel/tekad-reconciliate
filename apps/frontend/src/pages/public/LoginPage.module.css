@@ -17,11 +17,11 @@
   justify-content: space-between;
   padding: 48px 56px;
   color: var(--mantine-color-white);
-  background-color: #13233a;
+  background-color: #15191b;
   background-image:
     radial-gradient(
       70% 60% at 85% 100%,
-      rgba(63, 203, 184, 0.32),
+      rgba(22, 219, 101, 0.32),
       transparent 70%
     ),
     repeating-radial-gradient(
@@ -30,7 +30,7 @@
       rgba(157, 230, 220, 0.07) 54px 55px,
       transparent 55px 56px
     ),
-    linear-gradient(160deg, #1d3350 0%, #0d1825 100%);
+    linear-gradient(160deg, #1c2225 0%, #0e1214 100%);
 
   @media (min-width: $mantine-breakpoint-md) {
     display: flex;

@@ -1,14 +1,14 @@
-/* The valley at night: deep teal, lit from the bottom by the mark's arc. */
+/* The valley at night: TekAD black, lit from the bottom by the mark's arc. */
 .navbar {
   border-right: none;
-  background-color: #13233a;
+  background-color: #15191b;
   background-image:
     radial-gradient(
       120% 50% at 0% 100%,
-      rgba(63, 203, 184, 0.16),
+      rgba(22, 219, 101, 0.16),
       transparent 70%
     ),
-    linear-gradient(180deg, #1b3049 0%, #13233a 100%);
+    linear-gradient(180deg, #1a1f21 0%, #15191b 100%);
   overflow: hidden;
 
   /* The mark, large and faint, behind the bottom of the menu. */
@@ -31,7 +31,7 @@
 }
 
 .mobileHeader {
-  background-color: #13233a;
+  background-color: #15191b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 

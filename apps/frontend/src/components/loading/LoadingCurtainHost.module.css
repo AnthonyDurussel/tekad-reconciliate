@@ -17,7 +17,7 @@
   pointer-events: auto;
 }
 
-/* The brand ground: a soft glow of the diamond's teal and faint rings. */
+/* The brand ground: a soft glow of the logo's green and faint rings. */
 .veil {
   position: absolute;
   inset: 0;
@@ -26,22 +26,22 @@
   background-image:
     radial-gradient(
       55% 50% at 50% 46%,
-      rgba(63, 203, 184, 0.16) 0%,
+      rgba(22, 219, 101, 0.16) 0%,
       transparent 70%
     ),
     repeating-radial-gradient(
       circle at 50% 46%,
       transparent 0 46px,
-      rgba(11, 133, 119, 0.08) 46px 47px,
+      rgba(10, 158, 70, 0.08) 46px 47px,
       transparent 47px 48px
     );
 
   @mixin dark {
-    background-color: #0e1620;
+    background-color: #0d1012;
     background-image:
       radial-gradient(
         55% 50% at 50% 46%,
-        rgba(63, 203, 184, 0.2) 0%,
+        rgba(22, 219, 101, 0.2) 0%,
         transparent 70%
       ),
       repeating-radial-gradient(
@@ -68,7 +68,7 @@
 }
 
 .roof {
-  fill: #0f1c2b;
+  fill: #0d1012;
 
   @mixin dark {
     fill: #ffffff;
@@ -81,7 +81,7 @@
 }
 
 .gem {
-  fill: #3fcbb8;
+  fill: #16db65;
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -95,7 +95,7 @@
   font-size: 118px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  fill: #0f1c2b;
+  fill: #0d1012;
 
   @mixin dark {
     fill: #ffffff;
@@ -108,10 +108,10 @@
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  fill: #0b8577;
+  fill: #0a9e46;
 
   @mixin dark {
-    fill: #3fcbb8;
+    fill: #16db65;
   }
 }
 

@@ -7,7 +7,7 @@ import {
   isLoadingCurtainHeld,
   subscribeLoadingCurtain,
 } from "./loadingCurtainStore";
-import { GEM_PATH, ROOF_PATH } from "./logoPaths";
+import { GEM_PATH, LOGO_VIEWBOX, ROOF_PATH } from "./logoPaths";
 
 function prefersReducedMotion() {
   return (
@@ -68,26 +68,23 @@ export function LoadingCurtainHost() {
       data-testid="loading-curtain"
     >
       <div ref={veilRef} className={classes.veil} />
-      {/* The mark of `public/logo-tekad.svg` in one SVG, so that its parts can move. */}
+      {/* The TekAD logo in one SVG, so that its parts can move. */}
       <svg ref={heroRef} className={classes.hero} viewBox="-20 -20 800 230">
-        <path
-          ref={roofRef}
-          className={classes.roof}
-          d={ROOF_PATH}
-          fillRule="evenodd"
-        />
-        <g className={classes.spin}>
-          <path ref={gemRef} className={classes.gem} d={GEM_PATH} />
-        </g>
+        <svg x="0" y="0" width="560" height="161" viewBox={LOGO_VIEWBOX}>
+          <path ref={roofRef} className={classes.roof} d={ROOF_PATH} />
+          <g className={classes.spin}>
+            <path ref={gemRef} className={classes.gem} d={GEM_PATH} />
+          </g>
+        </svg>
         <g ref={wordRef}>
-          <text className={classes.word} x="200" y="98">
-            Tekad
+          <text className={classes.line} x="600" y="96">
+            Frais
           </text>
-          <text className={classes.line} x="204" y="136">
-            bexio · Revolut · UBS
+          <text className={classes.line} x="600" y="128">
+            bexio · Revolut
           </text>
         </g>
-        <text ref={taglineRef} className={classes.tagline} x="380" y="196">
+        <text ref={taglineRef} className={classes.tagline} x="280" y="200">
           {t("app.subtitle")}
         </text>
       </svg>

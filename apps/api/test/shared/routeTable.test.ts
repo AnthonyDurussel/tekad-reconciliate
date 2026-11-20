@@ -67,7 +67,7 @@ describe("table des routes", () => {
   });
 
   it("comptabiliser et synchroniser : comptable et admin, jamais le paramétrage", () => {
-    for (const name of ["bookExpense", "unbookExpense", "syncAll", "syncRevolut"]) {
+    for (const name of ["bookExpense", "unbookExpense", "syncAll", "importRevolutStatement"]) {
       expect(reaches(RoleDTO.ACCOUNTANT, ROUTE_ACCESS.get(name)!), name).toBe(true);
       expect(reaches(RoleDTO.VIEWER, ROUTE_ACCESS.get(name)!), name).toBe(false);
     }

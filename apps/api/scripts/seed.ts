@@ -223,7 +223,7 @@ async function seedDemo() {
   if (!revolut.revolut_account_id) {
     await prisma.paymentAccountDB.update({
       where: { id: revolut.id },
-      data: { revolut_account_id: "demo-revolut-chf" },
+      data: { revolut_account_id: "CHF Main" },
     });
   }
   if (!(await prisma.paymentCardDB.findUnique({ where: { last4: "4821" } }))) {
@@ -276,7 +276,7 @@ async function seedDemo() {
       create: {
         revolut_id: t.id,
         leg_id: `${t.id}-leg`,
-        revolut_account_id: "demo-revolut-chf",
+        revolut_account_id: "CHF Main",
         payment_account_id: revolut.id,
         type: "card_payment",
         state: "completed",

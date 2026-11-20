@@ -90,11 +90,15 @@ export class PrismaRevolutTransactionRepository implements IRevolutTransactionRe
     return rows.map(toTransaction);
   }
 
-  async upsertMany(rows: RevolutTransactionImport[]): Promise<number> {
+  async upsertMany(
+    rows: (RevolutTransactionImport & { paymentAccountId: string | null })[],
+  ): Promise<{ created: number; updated: number }> {
     let created = 0;
+    let updated = 0;
     for (const r of rows) {
       const data = {
         revolut_account_id: r.revolutAccountId,
+        payment_account_id: r.paymentAccountId,
         type: r.type,
         state: r.state,
         occurred_at: r.occurredAt,
@@ -122,6 +126,7 @@ export class PrismaRevolutTransactionRepository implements IRevolutTransactionRe
           where: { id: existing.id },
           data,
         });
+        updated++;
       } else {
         await this.prisma.revolutTransactionDB.create({
           data: { revolut_id: r.revolutId, leg_id: r.legId, ...data },
@@ -129,16 +134,7 @@ export class PrismaRevolutTransactionRepository implements IRevolutTransactionRe
         created++;
       }
     }
-    return created;
-  }
-
-  async linkPaymentAccounts(map: Map<string, string>): Promise<void> {
-    for (const [revolutAccountId, paymentAccountId] of map) {
-      await this.prisma.revolutTransactionDB.updateMany({
-        where: { revolut_account_id: revolutAccountId },
-        data: { payment_account_id: paymentAccountId },
-      });
-    }
+    return { created, updated };
   }
 
   async listUnmatched(from: Date, to: Date) {

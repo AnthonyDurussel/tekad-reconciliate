@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import type { HttpRequest, HttpResponseInit } from "@azure/functions";
-import { revolutSyncSchema } from "@repo/models";
+import { revolutImportSchema } from "@repo/models";
 import { parseBody } from "@/shared/infrastructure/http/parseBody.js";
 import { ok } from "@/shared/infrastructure/http/responses.js";
 import type { IAuthorizationService } from "@/user/application/services/IAuthorizationService.js";
@@ -36,11 +36,9 @@ export class SyncController {
     return ok(await this.useCases.extract(await this.userId()));
   }
 
-  async revolut(request: HttpRequest): Promise<HttpResponseInit> {
-    const body = await parseBody(request, revolutSyncSchema);
-    return ok(
-      await this.useCases.revolutSync(await this.userId(), body.from, body.to),
-    );
+  async revolutImport(request: HttpRequest): Promise<HttpResponseInit> {
+    const body = await parseBody(request, revolutImportSchema);
+    return ok(await this.useCases.revolutImport(await this.userId(), body));
   }
 
   async match(): Promise<HttpResponseInit> {
