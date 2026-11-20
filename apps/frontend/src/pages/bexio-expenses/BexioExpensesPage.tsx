@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import {
   ActionIcon,
   Alert,
@@ -18,7 +18,6 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
-import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import {
   IconCircleCheck,
@@ -32,7 +31,7 @@ import {
   IconTransfer,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   BexioExpenseIssueDTO,
   PermissionDTO,
@@ -50,7 +49,6 @@ import {
   useGetPaymentAccountsQuery,
   useGetSyncStatusQuery,
   useRunSyncMutation,
-  useUnlinkBexioExpenseMutation,
 } from "@/store/slices/api";
 import { getErrorMessage } from "@/utils/apiError";
 import {
@@ -69,6 +67,7 @@ import {
   type SummaryLine,
 } from "./bexioExpenses";
 import LinkReceiptModal from "./LinkReceiptModal";
+import useConfirmUnlink from "./useConfirmUnlink";
 
 /** Valeur du filtre « compte » pour « compte inconnu ». */
 const NONE = "none";
@@ -123,6 +122,9 @@ export default function BexioExpensesPage() {
   const canManage = can(PermissionDTO.EXPENSE_MANAGE);
   const canSync = can(PermissionDTO.SYNC_RUN);
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  /** Retour du détail vers la liste avec les mêmes filtres. */
+  const backState = { back: params.toString() ? `?${params}` : "" };
   const setParam = (patch: Record<string, string | null>) =>
     setParams(
       (current) => {
@@ -162,7 +164,6 @@ export default function BexioExpensesPage() {
   const { data: accounts = [] } = useGetPaymentAccountsQuery();
   const { data: status } = useGetSyncStatusQuery();
   const [runSync, { isLoading: syncing }] = useRunSyncMutation();
-  const [unlink] = useUnlinkBexioExpenseMutation();
   const [linking, setLinking] = useState<BexioExpenseDTO | null>(null);
 
   const rows = useMemo(() => filterByIssue(all, issue), [all, issue]);
@@ -194,34 +195,7 @@ export default function BexioExpensesPage() {
     }
   };
 
-  const confirmUnlink = (row: BexioExpenseDTO) =>
-    modals.openConfirmModal({
-      title: t("bexioExpenses.unlink.title"),
-      children: (
-        <Text size="sm">
-          {t("bexioExpenses.unlink.confirm", {
-            file: row.expenseFileName ?? "—",
-            no: row.documentNo,
-          })}
-        </Text>
-      ),
-      labels: {
-        confirm: t("bexioExpenses.unlink.action"),
-        cancel: t("common.cancel"),
-      },
-      confirmProps: { color: "red" },
-      onConfirm: async () => {
-        try {
-          await unlink(row.id).unwrap();
-          notifications.show({
-            color: "teal",
-            message: t("bexioExpenses.unlink.done"),
-          });
-        } catch (e) {
-          notifications.show({ color: "red", message: getErrorMessage(e) });
-        }
-      },
-    });
+  const confirmUnlink = useConfirmUnlink();
 
   const syncButton = canSync && (
     <Tooltip
@@ -369,6 +343,10 @@ export default function BexioExpensesPage() {
                   key={row.id}
                   row={row}
                   canManage={canManage}
+                  backState={backState}
+                  onOpen={() =>
+                    navigate(`/bexio-expenses/${row.id}`, { state: backState })
+                  }
                   onLink={() => setLinking(row)}
                   onUnlink={() => confirmUnlink(row)}
                 />
@@ -438,21 +416,29 @@ function SummaryTile({
   );
 }
 
+/** Un clic dans une cellule d'actions n'ouvre pas le détail. */
+const stop = (e: MouseEvent) => e.stopPropagation();
+
 function BexioExpenseRow({
   row,
   canManage,
+  backState,
+  onOpen,
   onLink,
   onUnlink,
 }: {
   row: BexioExpenseDTO;
   canManage: boolean;
+  backState: { back: string };
+  onOpen: () => void;
   onLink: () => void;
   onUnlink: () => void;
 }) {
   const { t } = useTranslation();
   const draft = row.status === "DRAFT";
+  const detailPath = `/bexio-expenses/${row.id}`;
   return (
-    <Table.Tr>
+    <Table.Tr onClick={onOpen} style={{ cursor: "pointer" }}>
       <Table.Td style={{ whiteSpace: "nowrap" }}>
         {formatDate(row.paidOn)}
       </Table.Td>
@@ -467,9 +453,19 @@ function BexioExpenseRow({
         )}
       </Table.Td>
       <Table.Td maw={260}>
-        <Text size="sm" fw={600} truncate>
+        <Anchor
+          component={Link}
+          to={detailPath}
+          state={backState}
+          onClick={stop}
+          size="sm"
+          fw={600}
+          c="inherit"
+          style={{ display: "block" }}
+          truncate
+        >
           {row.vendor ?? row.title ?? "—"}
-        </Text>
+        </Anchor>
         {row.vendor && row.title && (
           <Text size="xs" c="dimmed" truncate>
             {row.title}
@@ -507,9 +503,20 @@ function BexioExpenseRow({
             )}
           </Stack>
         ) : (
-          <Badge size="sm" variant="outline" color="orange">
-            {t("bexioExpenses.unknownAccount")}
-          </Badge>
+          <Tooltip label={t("bexioExpenses.toAssociateHint")}>
+            <Badge
+              component={Link}
+              to={detailPath}
+              state={backState}
+              onClick={stop}
+              size="sm"
+              variant="light"
+              color="orange"
+              style={{ cursor: "pointer" }}
+            >
+              {t("bexioExpenses.toAssociate")}
+            </Badge>
+          </Tooltip>
         )}
       </Table.Td>
       <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>
@@ -517,10 +524,10 @@ function BexioExpenseRow({
           {formatAmount(row.gross, row.currency)}
         </Text>
       </Table.Td>
-      <Table.Td maw={220}>
+      <Table.Td maw={220} onClick={stop}>
         <ReceiptCell row={row} canManage={canManage} onLink={onLink} />
       </Table.Td>
-      <Table.Td>
+      <Table.Td onClick={stop}>
         <ReconciliationCell row={row} />
       </Table.Td>
       <Table.Td>
@@ -544,7 +551,7 @@ function BexioExpenseRow({
         )}
       </Table.Td>
       {canManage && (
-        <Table.Td>
+        <Table.Td onClick={stop}>
           {row.expenseId ? (
             <Tooltip label={t("bexioExpenses.unlink.action")}>
               <ActionIcon

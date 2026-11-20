@@ -379,6 +379,71 @@
       "title": "Délier la pièce ?",
       "confirm": "La pièce « {{file}} » ne sera plus liée à la dépense {{no}} dans l’application. Le fichier reste joint à la dépense dans bexio : retirez-le là-bas au besoin.",
       "done": "Pièce déliée"
+    },
+    "toAssociate": "À associer",
+    "toAssociateHint": "Le compte bancaire bexio ne correspond à aucun compte de paiement : ouvrez la dépense pour l'associer."
+  },
+  "bexioExpenseDetail": {
+    "title": "Dépense bexio",
+    "back": "Retour aux dépenses bexio",
+    "notFound": "Dépense bexio introuvable.",
+    "preview": {
+      "file": "Fichier {{n}}",
+      "emptyTitle": "Aucune pièce",
+      "emptyText": "Aucun fichier n'est joint à cette dépense dans bexio et aucune pièce n'y est liée."
+    },
+    "expense": {
+      "title": "Dépense bexio",
+      "documentNo": "N°",
+      "vendor": "Fournisseur",
+      "titleField": "Titre",
+      "status": "Statut bexio",
+      "done": "Comptabilisée",
+      "syncedAt": "Dernière synchronisation"
+    },
+    "account": {
+      "title": "Compte payeur",
+      "bank": "Compte bancaire bexio",
+      "bankId": "(id bexio {{id}})",
+      "bankOwner": "Associé au compte de paiement « {{name}} »",
+      "noBank": "Aucun compte bancaire dans bexio",
+      "source": {
+        "MANUAL": "choisi sur cette dépense",
+        "BANK_ACCOUNT": "compte bancaire bexio associé",
+        "ACCOUNT_NO": "par le n° de compte",
+        "UNKNOWN": "inconnu : choisissez le compte de paiement"
+      },
+      "choose": "Compte de paiement",
+      "choosePlaceholder": "Choisir un compte",
+      "applyToBank": "Pour toutes les dépenses de ce compte bancaire bexio",
+      "applyToBankHint": "Associe le compte bancaire bexio (id {{id}}) à ce compte de paiement, dans « Comptes et cartes » : toutes les dépenses payées depuis lui le suivront.",
+      "applyToBankDisabled": "Indisponible : la dépense n'a pas de compte bancaire bexio.",
+      "automatic": "Revenir à l'automatique"
+    },
+    "receipt": {
+      "noLinked": "Aucune pièce de l'application liée.",
+      "noAttachment": "Aucun fichier joint dans bexio"
+    },
+    "reconciliation": {
+      "state": {
+        "inBexio": "Rapprochée dans bexio",
+        "byStatement": "Rapprochée par le relevé",
+        "toReconcileInBexio": "À rapprocher",
+        "toReconcileByStatement": "À rapprocher",
+        "linkReceiptFirst": "À rapprocher",
+        "notRequired": "Non requis",
+        "unknownAccount": "Compte à associer"
+      },
+      "hint": {
+        "inBexio": "La dépense est rapprochée d'une transaction bancaire dans bexio.",
+        "byStatement": "La pièce liée est rapprochée d'une transaction du relevé importé.",
+        "toReconcileInBexio": "Compte rapproché dans bexio : faites le rapprochement bancaire dans bexio, puis resynchronisez.",
+        "toReconcileByStatement": "Compte rapproché par le relevé importé : choisissez la transaction du relevé sur la pièce liée.",
+        "linkReceiptFirst": "Compte rapproché par le relevé importé : liez d'abord une pièce, puis choisissez sa transaction.",
+        "notRequired": "Le compte payeur n'a pas de relevé : la pièce suffit.",
+        "unknownAccount": "Associez d'abord le compte payeur : le rapprochement exigé en dépend."
+      },
+      "pickTransaction": "Choisir la transaction du relevé sur la pièce"
     }
   },
   "ignore": {
@@ -430,7 +495,13 @@
         "NONE": "Aucun relevé (ex. compte courant, espèces) : la pièce suffit, l'application passe l'écriture."
       },
       "statementFormat": "Format du relevé",
-      "statementFormatHint": "L'export CSV dont ce compte reçoit l'import."
+      "statementFormatHint": "L'export CSV dont ce compte reçoit l'import.",
+      "bexioBank": {
+        "associated": "Compte bancaire bexio n° {{id}} associé",
+        "dissociate": "Dissocier",
+        "dissociateTitle": "Dissocier le compte bancaire bexio ?",
+        "dissociateConfirm": "Le compte bancaire bexio n° {{id}} ne sera plus associé à « {{name}} » : ses dépenses retrouveront leur compte par le n° du plan comptable."
+      }
     },
     "categories": {
       "title": "Types de dépense",

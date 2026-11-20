@@ -14,7 +14,12 @@ import { baseApi } from "./baseApi";
  * Changer l'un change le classement et l'imputation proposée des pièces :
  * les pièces et le tableau de bord se relisent.
  */
-const AFFECTED = ["Expense", "Candidates", "Dashboard"] as const;
+const AFFECTED = [
+  "Expense",
+  "Candidates",
+  "Dashboard",
+  "BexioExpense",
+] as const;
 
 export const settingsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

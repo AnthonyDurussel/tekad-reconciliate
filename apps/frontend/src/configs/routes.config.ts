@@ -28,6 +28,14 @@ export const protectedRoutes: Route[] = [
     permissions: [PermissionDTO.EXPENSE_VIEW],
   },
   {
+    key: "bexioExpenseDetail",
+    path: "/bexio-expenses/:id",
+    component: lazy(
+      () => import("@/pages/bexio-expenses/BexioExpenseDetailPage"),
+    ),
+    permissions: [PermissionDTO.EXPENSE_VIEW],
+  },
+  {
     key: "revolut",
     path: "/revolut",
     component: lazy(() => import("@/pages/revolut/RevolutPage")),

@@ -379,6 +379,71 @@
       "title": "Unlink the receipt?",
       "confirm": "The receipt “{{file}}” will no longer be linked to expense {{no}} in the app. The file stays attached to the expense in bexio: remove it there if needed.",
       "done": "Receipt unlinked"
+    },
+    "toAssociate": "To associate",
+    "toAssociateHint": "The bexio bank account matches no payment account: open the expense to associate it."
+  },
+  "bexioExpenseDetail": {
+    "title": "bexio expense",
+    "back": "Back to bexio expenses",
+    "notFound": "bexio expense not found.",
+    "preview": {
+      "file": "File {{n}}",
+      "emptyTitle": "No receipt",
+      "emptyText": "No file is attached to this expense in bexio and no receipt is linked to it."
+    },
+    "expense": {
+      "title": "bexio expense",
+      "documentNo": "No.",
+      "vendor": "Supplier",
+      "titleField": "Title",
+      "status": "bexio status",
+      "done": "Booked",
+      "syncedAt": "Last sync"
+    },
+    "account": {
+      "title": "Paying account",
+      "bank": "bexio bank account",
+      "bankId": "(bexio id {{id}})",
+      "bankOwner": "Associated with payment account “{{name}}”",
+      "noBank": "No bank account in bexio",
+      "source": {
+        "MANUAL": "chosen on this expense",
+        "BANK_ACCOUNT": "associated bexio bank account",
+        "ACCOUNT_NO": "by account number",
+        "UNKNOWN": "unknown: choose the payment account"
+      },
+      "choose": "Payment account",
+      "choosePlaceholder": "Choose an account",
+      "applyToBank": "For every expense of this bexio bank account",
+      "applyToBankHint": "Associates the bexio bank account (id {{id}}) with this payment account, in “Accounts and cards”: every expense paid from it will follow.",
+      "applyToBankDisabled": "Unavailable: the expense has no bexio bank account.",
+      "automatic": "Back to automatic"
+    },
+    "receipt": {
+      "noLinked": "No receipt of the app linked.",
+      "noAttachment": "No file attached in bexio"
+    },
+    "reconciliation": {
+      "state": {
+        "inBexio": "Reconciled in bexio",
+        "byStatement": "Reconciled by the statement",
+        "toReconcileInBexio": "To reconcile",
+        "toReconcileByStatement": "To reconcile",
+        "linkReceiptFirst": "To reconcile",
+        "notRequired": "Not required",
+        "unknownAccount": "Account to associate"
+      },
+      "hint": {
+        "inBexio": "The expense is reconciled with a bank transaction in bexio.",
+        "byStatement": "The linked receipt is matched with a transaction of the imported statement.",
+        "toReconcileInBexio": "Account reconciled in bexio: do the bank reconciliation in bexio, then sync again.",
+        "toReconcileByStatement": "Account reconciled by the imported statement: pick the statement transaction on the linked receipt.",
+        "linkReceiptFirst": "Account reconciled by the imported statement: link a receipt first, then pick its transaction.",
+        "notRequired": "The paying account has no statement: the receipt is enough.",
+        "unknownAccount": "Associate the paying account first: the required reconciliation depends on it."
+      },
+      "pickTransaction": "Pick the statement transaction on the receipt"
     }
   },
   "ignore": {
@@ -430,7 +495,13 @@
         "NONE": "No statement (e.g. current account, cash): the receipt is enough, the app posts the entry."
       },
       "statementFormat": "Statement format",
-      "statementFormatHint": "The CSV export imported into this account."
+      "statementFormatHint": "The CSV export imported into this account.",
+      "bexioBank": {
+        "associated": "bexio bank account no. {{id}} associated",
+        "dissociate": "Dissociate",
+        "dissociateTitle": "Dissociate the bexio bank account?",
+        "dissociateConfirm": "bexio bank account no. {{id}} will no longer be associated with “{{name}}”: its expenses will find their account by chart account number again."
+      }
     },
     "categories": {
       "title": "Expense types",
