@@ -1,32 +1,5 @@
 import { ReconciliationModeDTO, type BexioExpenseDTO } from "@repo/models";
 
-export interface SummaryLine {
-  count: number;
-  /** Total des montants en CHF (les autres devises à part). */
-  amountChf: number;
-}
-
-export interface BexioExpenseSummary {
-  all: SummaryLine;
-  linked: SummaryLine;
-  unlinked: SummaryLine;
-}
-
-/** Les tuiles du haut de page : toutes, rattachées, non rattachées. */
-export function summarize(expenses: BexioExpenseDTO[]): BexioExpenseSummary {
-  const line = (rows: BexioExpenseDTO[]): SummaryLine => ({
-    count: rows.length,
-    amountChf: rows
-      .filter((e) => e.currency === "CHF")
-      .reduce((sum, e) => sum + e.gross, 0),
-  });
-  return {
-    all: line(expenses),
-    linked: line(expenses.filter((e) => e.expenseId !== null)),
-    unlinked: line(expenses.filter((e) => e.expenseId === null)),
-  };
-}
-
 /** Le rapprochement d'une dépense bexio, pour son libellé et sa marche à suivre. */
 export type ReconciliationState =
   | "inBexio"

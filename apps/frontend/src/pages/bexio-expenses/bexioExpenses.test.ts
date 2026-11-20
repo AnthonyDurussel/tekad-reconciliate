@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ReconciliationModeDTO, type BexioExpenseDTO } from "@repo/models";
-import { reconciliationState, summarize } from "./bexioExpenses";
+import { reconciliationState } from "./bexioExpenses";
 
 const expense = (patch: Partial<BexioExpenseDTO> = {}): BexioExpenseDTO => ({
   id: "b1",
@@ -22,23 +22,6 @@ const expense = (patch: Partial<BexioExpenseDTO> = {}): BexioExpenseDTO => ({
   attachmentIds: [],
   expenseId: null,
   ...patch,
-});
-
-describe("summarize", () => {
-  it("compte toutes, rattachées et non rattachées, en CHF seulement", () => {
-    const summary = summarize([
-      expense({ id: "1", gross: 10, expenseId: "e1" }),
-      expense({ id: "2", gross: 20.5 }),
-      expense({ id: "3", gross: 99, currency: "EUR" }),
-    ]);
-    expect(summary.all).toEqual({ count: 3, amountChf: 30.5 });
-    expect(summary.linked).toEqual({ count: 1, amountChf: 10 });
-    expect(summary.unlinked).toEqual({ count: 2, amountChf: 20.5 });
-  });
-
-  it("vide : des zéros", () => {
-    expect(summarize([]).all).toEqual({ count: 0, amountChf: 0 });
-  });
 });
 
 describe("reconciliationState", () => {

@@ -184,10 +184,12 @@ normalised by `toExtraction()` (dates, ISO currency, card last 4 cross-checked w
 `/dashboard` « Tableau de bord » (KPIs per status, amounts per payment account and per type, missing
 Revolut receipts, last syncs + sync buttons); `/expenses` « Dépenses » (filters: period, **payment
 account**, **type**, status, issue, search — kept in the URL; table with pièce / bexio / rapprochement,
-account / type / booking / status; Excel); `/expenses/:id` (cards Pièce — preview, attach / detach —,
+account / type / booking / status; **merged with the bexio expenses of the period that have no dépense**
+(read live, « bexio » badge, « Créer la dépense »; `issue=not_in_app` frontend-only filter, pure logic in
+`pages/expenses/mergeRows.ts`); « Rattacher automatiquement »; Excel = app dépenses only); `/expenses/:id` (cards Pièce — preview, attach / detach —,
 Dépense bexio — live, link / detach —, Rapprochement for `STATEMENT_IMPORT` accounts; fields, account &
-type, booking proposal, actions); `/bexio-expenses` « Dépenses bexio » (live list and detail,
-« Créer la dépense »); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
+type, booking proposal, actions); `/bexio-expenses/:id` (live bexio expense detail, « Créer la dépense »;
+`/bexio-expenses` redirects to `/expenses?issue=not_in_app`); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
 `/admin/accounts` « Comptes et cartes », `/admin/categories` « Types de dépense », `/admin/ai` « Intelligence artificielle », `/admin/users`.
 Home: `/dashboard`.
 

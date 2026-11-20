@@ -2,7 +2,6 @@ import {
   IconBuildingBank,
   IconCategory,
   IconCreditCard,
-  IconFileInvoice,
   IconLayoutDashboard,
   IconReceipt,
   IconSparkles,
@@ -25,13 +24,6 @@ export const navigationConfig: NavigationItem[] = [
     path: "/expenses",
     translateKey: "nav.expenses",
     icon: IconReceipt,
-    permissions: [PermissionDTO.EXPENSE_VIEW],
-  },
-  {
-    key: "bexioExpenses",
-    path: "/bexio-expenses",
-    translateKey: "nav.bexioExpenses",
-    icon: IconFileInvoice,
     permissions: [PermissionDTO.EXPENSE_VIEW],
   },
   {

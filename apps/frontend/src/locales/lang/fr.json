@@ -65,7 +65,6 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "expenses": "Dépenses",
-    "bexioExpenses": "Dépenses bexio",
     "revolut": "Relevés",
     "admin": {
       "main": "Administration",
@@ -179,7 +178,8 @@
       "MISSING_RECEIPT": "À faire : sans pièce",
       "NOT_IN_BEXIO": "À faire : pas dans bexio",
       "NOT_RECONCILED": "À faire : non rapprochée",
-      "ok": "Complètes"
+      "ok": "Complètes",
+      "not_in_app": "À faire : pas dans l'application"
     },
     "links": {
       "receipt": {
@@ -198,7 +198,26 @@
         "na": "Pas de rapprochement par relevé"
       }
     },
-    "createdDone": "Dépense créée."
+    "createdDone": "Dépense créée.",
+    "exportHint": "Les dépenses de l'application seulement (pas les dépenses bexio hors application).",
+    "bexio": {
+      "source": "bexio",
+      "sourceHint": "Dépense saisie dans bexio, lue en direct : elle n'a pas encore sa dépense dans l'application.",
+      "notInApp": "Hors application",
+      "notInAppCount_one": "{{count}} dépense bexio n'est pas dans l'application ({{amount}}).",
+      "notInAppCount_other": "{{count}} dépenses bexio ne sont pas dans l'application ({{amount}}).",
+      "showNotInApp": "Les voir",
+      "notConfigured": "bexio n'est pas configuré : seules les dépenses de l'application sont listées.",
+      "unavailable": "Dépenses bexio indisponibles ({{message}}) : seules les dépenses de l'application sont listées.",
+      "empty": "Aucune dépense bexio hors application pour ces filtres.",
+      "total_one": "bexio seulement · {{count}} dépense",
+      "total_other": "bexio seulement · {{count}} dépenses",
+      "otherCurrency_one": "{{count}} dépense bexio dans une autre devise n'est pas comptée.",
+      "otherCurrency_other": "{{count}} dépenses bexio dans une autre devise ne sont pas comptées.",
+      "sync": "Rattacher automatiquement",
+      "syncHint": "Rattache les dépenses dont la pièce est jointe dans bexio, détache celles qui ont disparu de bexio.",
+      "lastSync": "Dernier rattachement le {{date}}"
+    }
   },
   "expenseDetail": {
     "title": "Dépense",
@@ -383,24 +402,13 @@
     "createExpense": "Créer une dépense"
   },
   "bexioExpenses": {
-    "title": "Dépenses bexio",
-    "subtitle": "Les dépenses saisies dans bexio, lues en direct : chacune devrait avoir sa dépense dans l'application.",
-    "sync": "Rattacher automatiquement",
-    "syncHint": "Rattache les dépenses dont la pièce est jointe dans bexio, détache celles qui ont disparu de bexio.",
-    "lastSync": "Dernier rattachement le {{date}}",
-    "notConfigured": "bexio n'est pas configuré (BEXIO_API_TOKEN) : les dépenses bexio ne peuvent pas être lues.",
     "notConfiguredShort": "bexio n'est pas configuré.",
-    "empty": "Aucune dépense bexio pour ces filtres.",
-    "search": "Fournisseur…",
-    "unlinkedOnly": "Non rattachées seulement",
     "paidOn": "Payée le",
     "documentNo": "N°",
     "vendor": "Fournisseur / titre",
     "bookingAccount": "Compte de charge",
     "paymentAccount": "Compte payeur",
-    "attachments": "Fichiers",
     "reconciliation": "Rapprochement",
-    "expense": "Dépense",
     "draft": "Brouillon",
     "linked": "Rattachée",
     "unlinked": "Non rattachée",
@@ -418,16 +426,11 @@
       "byStatement": "Par le relevé",
       "notRequired": "Non requis",
       "unknownAccount": "Compte inconnu"
-    },
-    "tiles": {
-      "all": "Dépenses bexio",
-      "linked": "Rattachées",
-      "unlinked": "Non rattachées"
     }
   },
   "bexioExpenseDetail": {
     "title": "Dépense bexio",
-    "back": "Retour aux dépenses bexio",
+    "back": "Retour aux dépenses",
     "notFound": "Dépense bexio introuvable.",
     "preview": {
       "file": "Fichier {{n}}",

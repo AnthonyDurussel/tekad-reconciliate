@@ -40,6 +40,7 @@ import {
 import { getErrorMessage, isConflict } from "@/utils/apiError";
 import { formatAmount, formatDate } from "@/utils/format";
 import { expenseLabel } from "@/pages/expenses/expenseLinks";
+import { NOT_IN_APP } from "@/pages/expenses/mergeRows";
 import BexioExpensePreview from "./BexioExpensePreview";
 import { previewFiles } from "./bexioExpenseDetail";
 import { STATE_COLOR, reconciliationState } from "./bexioExpenses";
@@ -56,7 +57,7 @@ export default function BexioExpenseDetailPage() {
   const location = useLocation();
   const back = () =>
     navigate(
-      `/bexio-expenses${(location.state as { back?: string } | null)?.back ?? ""}`,
+      `/expenses${(location.state as { back?: string } | null)?.back ?? `?issue=${NOT_IN_APP}`}`,
     );
   const { can } = usePermissions();
   const canManage = can(PermissionDTO.EXPENSE_MANAGE);

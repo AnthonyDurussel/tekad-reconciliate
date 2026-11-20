@@ -65,7 +65,6 @@
   "nav": {
     "dashboard": "Dashboard",
     "expenses": "Expenses",
-    "bexioExpenses": "bexio expenses",
     "revolut": "Statements",
     "admin": {
       "main": "Administration",
@@ -179,7 +178,8 @@
       "MISSING_RECEIPT": "To do: no receipt",
       "NOT_IN_BEXIO": "To do: not in bexio",
       "NOT_RECONCILED": "To do: not reconciled",
-      "ok": "Complete"
+      "ok": "Complete",
+      "not_in_app": "To do: not in the app"
     },
     "links": {
       "receipt": {
@@ -198,7 +198,26 @@
         "na": "No statement reconciliation"
       }
     },
-    "createdDone": "Expense created."
+    "createdDone": "Expense created.",
+    "exportHint": "App expenses only (not the bexio expenses missing from the app).",
+    "bexio": {
+      "source": "bexio",
+      "sourceHint": "Expense entered in bexio, read live: it has no expense in the app yet.",
+      "notInApp": "Not in the app",
+      "notInAppCount_one": "{{count}} bexio expense is not in the app ({{amount}}).",
+      "notInAppCount_other": "{{count}} bexio expenses are not in the app ({{amount}}).",
+      "showNotInApp": "Show them",
+      "notConfigured": "bexio is not configured: only the app expenses are listed.",
+      "unavailable": "bexio expenses unavailable ({{message}}): only the app expenses are listed.",
+      "empty": "No bexio expense missing from the app for these filters.",
+      "total_one": "bexio only · {{count}} expense",
+      "total_other": "bexio only · {{count}} expenses",
+      "otherCurrency_one": "{{count}} bexio expense in another currency is not counted.",
+      "otherCurrency_other": "{{count}} bexio expenses in another currency are not counted.",
+      "sync": "Link automatically",
+      "syncHint": "Links the expenses whose receipt is attached in bexio, unlinks those gone from bexio.",
+      "lastSync": "Last linking on {{date}}"
+    }
   },
   "expenseDetail": {
     "title": "Expense",
@@ -383,24 +402,13 @@
     "createExpense": "Create an expense"
   },
   "bexioExpenses": {
-    "title": "bexio expenses",
-    "subtitle": "Expenses entered in bexio, read live: each should have its expense in the app.",
-    "sync": "Link automatically",
-    "syncHint": "Links the expenses whose receipt is attached in bexio, detaches those gone from bexio.",
-    "lastSync": "Last linking on {{date}}",
-    "notConfigured": "bexio is not configured (BEXIO_API_TOKEN): bexio expenses cannot be read.",
     "notConfiguredShort": "bexio is not configured.",
-    "empty": "No bexio expense for these filters.",
-    "search": "Vendor…",
-    "unlinkedOnly": "Unlinked only",
     "paidOn": "Paid on",
     "documentNo": "No.",
     "vendor": "Vendor / title",
     "bookingAccount": "Expense account",
     "paymentAccount": "Paying account",
-    "attachments": "Files",
     "reconciliation": "Reconciliation",
-    "expense": "Expense",
     "draft": "Draft",
     "linked": "Linked",
     "unlinked": "Unlinked",
@@ -418,16 +426,11 @@
       "byStatement": "By statement",
       "notRequired": "Not required",
       "unknownAccount": "Unknown account"
-    },
-    "tiles": {
-      "all": "bexio expenses",
-      "linked": "Linked",
-      "unlinked": "Unlinked"
     }
   },
   "bexioExpenseDetail": {
     "title": "bexio expense",
-    "back": "Back to bexio expenses",
+    "back": "Back to expenses",
     "notFound": "bexio expense not found.",
     "preview": {
       "file": "File {{n}}",

@@ -19,7 +19,12 @@ export default function ExpenseOriginBadge({
   const { t } = useTranslation();
   return (
     <Tooltip label={t(`enum.expenseSourceHint.${source}`)} multiline w={240}>
-      <Badge size={size} variant="light" color={COLOR[source]}>
+      <Badge
+        size={size}
+        variant="light"
+        color={COLOR[source]}
+        style={{ flexShrink: 0 }}
+      >
         {t(`enum.expenseSource.${source}`)}
       </Badge>
     </Tooltip>
