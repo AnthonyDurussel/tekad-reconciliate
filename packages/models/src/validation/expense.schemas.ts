@@ -1,11 +1,14 @@
-import { number, string, type ObjectSchema } from "yup";
+import { boolean, number, string, type ObjectSchema } from "yup";
 import type {
   IgnoreDTO,
   MatchExpenseDTO,
   UpdateExpenseDTO,
 } from "../@types/dto/expense.dto.js";
 import type { RevolutImportDTO } from "../@types/dto/revolut.dto.js";
-import type { LinkBexioExpenseDTO } from "../@types/dto/bexioExpense.dto.js";
+import type {
+  LinkBexioExpenseDTO,
+  SetBexioExpenseAccountDTO,
+} from "../@types/dto/bexioExpense.dto.js";
 import {
   optionalDay,
   optionalId,
@@ -71,3 +74,9 @@ export const revolutImportSchema: ObjectSchema<RevolutImportDTO> = strictObject(
 
 export const linkBexioExpenseSchema: ObjectSchema<LinkBexioExpenseDTO> =
   strictObject({ expenseId: string().trim().uuid().required() });
+
+export const setBexioExpenseAccountSchema: ObjectSchema<SetBexioExpenseAccountDTO> =
+  strictObject({
+    paymentAccountId: string().trim().uuid().nullable().defined(),
+    applyToBankAccount: boolean().optional(),
+  });

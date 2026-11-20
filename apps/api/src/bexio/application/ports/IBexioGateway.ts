@@ -68,6 +68,10 @@ export interface IBexioGateway {
   listAccounts(): Promise<BexioAccountDTO[]>;
   /** Les codes TVA. */
   listTaxes(): Promise<BexioTaxDTO[]>;
+  /** Un fichier par son UUID (archivé ou non) : id, nom, type ; `null` s'il n'existe pas. */
+  findFileByUuid(
+    uuid: string,
+  ): Promise<{ id: string; name: string; mimeType: string | null } | null>;
   /** UUID d'un fichier connu par son id. */
   fileUuid(id: string): Promise<string>;
   listBankAccounts(): Promise<BexioBankAccount[]>;

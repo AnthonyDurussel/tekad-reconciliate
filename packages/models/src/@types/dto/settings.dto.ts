@@ -88,6 +88,11 @@ export interface PaymentAccountDTO {
   name: string;
   /** Compte du plan comptable bexio crédité (ex. 1021 Revolut, 2210 CC Anthony). */
   bexioAccountNo: string | null;
+  /**
+   * Compte bancaire bexio (`3.0/banking/accounts`) associé : les dépenses
+   * bexio payées depuis lui vont à ce compte de paiement.
+   */
+  bexioBankAccountId: number | null;
   /** Rapprochement des sorties : dans bexio, par import de relevé, ou aucun. */
   reconciliation: ReconciliationModeDTO;
   /** Format du relevé importé (import seulement). */
@@ -110,6 +115,7 @@ export interface CreatePaymentAccountDTO {
   kind: PaymentAccountKindDTO;
   name: string;
   bexioAccountNo?: string | null;
+  bexioBankAccountId?: number | null;
   reconciliation?: ReconciliationModeDTO;
   statementFormat?: StatementFormatDTO | null;
   /** Ignoré : découle de `reconciliation` (gardé pour compatibilité). */

@@ -226,6 +226,26 @@ export class BexioHttpGateway implements IBexioGateway {
     return rows.map(toBexioTax);
   }
 
+  async findFileByUuid(uuid: string) {
+    const rows = await this.json<BexioFileRow[]>(
+      "3.0/files/search?archived_state=all&limit=1",
+      {
+        method: "POST",
+        body: JSON.stringify([{ field: "uuid", value: uuid, criteria: "=" }]),
+      },
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      name:
+        row.extension && !row.name.endsWith(`.${row.extension}`)
+          ? `${row.name}.${row.extension}`
+          : row.name,
+      mimeType: row.mime_type ?? null,
+    };
+  }
+
   async fileUuid(id: string): Promise<string> {
     const file = await this.json<BexioFileRow>(
       `3.0/files/${encodeURIComponent(id)}`,
@@ -408,6 +428,13 @@ export class UnconfiguredBexioGateway implements IBexioGateway {
     this.fail();
   }
   fileUuid(): Promise<string> {
+    this.fail();
+  }
+  findFileByUuid(): Promise<{
+    id: string;
+    name: string;
+    mimeType: string | null;
+  } | null> {
     this.fail();
   }
   listBankAccounts(): Promise<BexioBankAccount[]> {

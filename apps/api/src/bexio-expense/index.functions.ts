@@ -21,6 +21,30 @@ export function registerBexioExpenseRoutes(app: HttpRouteRegistrar) {
     handler: (c, r) => controller(c).list(r),
   });
   route(app, {
+    name: "getBexioExpense",
+    methods: ["GET"],
+    path: "bexio-expenses/{id}",
+    access: PermissionDTO.EXPENSE_VIEW,
+    tx: false,
+    handler: (c, r) => controller(c).get(r),
+  });
+  route(app, {
+    name: "getBexioExpenseFile",
+    methods: ["GET"],
+    path: "bexio-expenses/{id}/files/{uuid}",
+    access: PermissionDTO.EXPENSE_VIEW,
+    tx: false,
+    handler: (c, r) => controller(c).file(r),
+  });
+  route(app, {
+    name: "setBexioExpensePaymentAccount",
+    methods: ["PUT"],
+    path: "bexio-expenses/{id}/payment-account",
+    access: PermissionDTO.EXPENSE_MANAGE,
+    tx: true,
+    handler: (c, r) => controller(c).setPaymentAccount(r),
+  });
+  route(app, {
     name: "linkBexioExpense",
     methods: ["POST"],
     path: "bexio-expenses/{id}/link",

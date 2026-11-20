@@ -71,12 +71,15 @@ function setup(list: BexioExpense[]) {
   const stored = new Map<string, StoredBexioExpense>();
   const repo: IBexioExpenseRepository = {
     replaceAll: async (rows) => {
+      const prev = new Map(stored);
       stored.clear();
-      for (const r of rows) stored.set(r.id, { ...r, syncedAt: new Date() });
+      for (const r of rows)
+        stored.set(r.id, { ...r, paymentAccountId: prev.get(r.id)?.paymentAccountId ?? null, syncedAt: new Date() });
     },
     list: async () => [...stored.values()],
     find: async (id) => stored.get(id) ?? null,
     setAttachments: async (id, ids) => void (stored.get(id)!.attachmentIds = ids),
+    setPaymentAccount: async (id, pid) => void (stored.get(id)!.paymentAccountId = pid),
   };
   const attached: [string, string[]][] = [];
   const bexio = {
@@ -92,6 +95,9 @@ function setup(list: BexioExpense[]) {
       { id: 6, name: "UBS", accountId: 1, iban: null },
     ],
     fileUuid: async (id: string) => `uuid-${id}`,
+    findFileByUuid: async (uuid: string) =>
+      uuid === "missing" ? null : { id: `id-${uuid}`, name: `${uuid}.pdf`, mimeType: "application/pdf" },
+    downloadFile: async (id: string) => ({ fileName: "x", mimeType: "application/pdf", data: Buffer.from(id) }),
     attachFilesToExpense: async (id: string, uuids: string[]) => void attached.push([id, uuids]),
   } as unknown as IBexioGateway;
   const pieces = new Map<string, Expense>();
@@ -109,13 +115,17 @@ function setup(list: BexioExpense[]) {
       [...pieces.values()].filter((e) => ids.includes(e.snapshot.bexioExpenseId ?? "")),
     save: async (e: Expense) => void pieces.set(e.id, e),
   } as unknown as IExpenseRepository;
+  const accountRows = new Map(accounts.map((a) => [a.id, { ...a }]));
   const settings = {
-    listPaymentAccounts: async () => accounts.map((a) => ({ ...a, expenseCount: 0 })),
+    listPaymentAccounts: async () => [...accountRows.values()].map((a) => ({ ...a, expenseCount: 0 })),
+    findPaymentAccount: async (id: string) => accountRows.get(id) ?? null,
+    savePaymentAccount: async (a: (typeof accounts)[number]) => void accountRows.set(a.id, { ...a }),
     listCategories: async () => categories.map((c) => ({ ...c, expenseCount: 0 })),
   } as unknown as ISettingsRepository;
   const txs = { findByExpense: async () => null } as unknown as IRevolutTransactionRepository;
   return {
     useCases: new BexioExpenseUseCases(repo, bexio, expenses, settings, txs),
+    accountRows,
     piece,
     pieces,
     attached,
@@ -170,5 +180,43 @@ describe("BexioExpenseUseCases", () => {
     await gone.useCases.sync();
     expect(gone.pieces.get("p1")!.snapshot.bexioExpenseId).toBeNull();
     expect(gone.pieces.get("p1")!.status).not.toBe(ExpenseStatusDTO.BOOKED);
+  });
+});
+
+describe("BexioExpenseUseCases — fiche et compte", () => {
+  const ID = "11111111-1111-4111-8111-111111111111";
+
+  it("fiche : fichiers joints nommés ; seul un fichier de la dépense se télécharge", async () => {
+    const s = setup([bexioExpense({ attachmentIds: ["uuid-a"] })]);
+    await s.useCases.sync();
+    const detail = await s.useCases.get(ID);
+    expect(detail.attachments).toEqual([{ uuid: "uuid-a", name: "uuid-a.pdf", mimeType: "application/pdf" }]);
+    const file = await s.useCases.file(ID, "uuid-a");
+    expect(file.data.toString()).toBe("id-uuid-a");
+    expect(file.fileName).toBe("uuid-a.pdf");
+    await expect(s.useCases.file(ID, "uuid-autre")).rejects.toThrow(/not found/);
+  });
+
+  it("compte inconnu → choisi sur la dépense, puis pour tout le compte bancaire bexio", async () => {
+    const s = setup([
+      bexioExpense({ bankAccountId: 9, attachmentIds: [] }),
+      bexioExpense({ id: "22222222-2222-4222-8222-222222222222", documentNo: "AU-2", bankAccountId: 9 }),
+    ]);
+    await s.useCases.sync();
+    let [one] = await s.useCases.list({ search: undefined });
+    expect(one.issues).toContain("UNKNOWN_ACCOUNT");
+    const manual = await s.useCases.setPaymentAccount(ID, "acc-cc");
+    expect(manual).toMatchObject({ paymentAccountId: "acc-cc", paymentAccountSource: "MANUAL", reconciled: null });
+    // Pour toutes les dépenses de ce compte bancaire : associé au compte UBS.
+    const all = await s.useCases.setPaymentAccount(ID, "acc-ubs", true);
+    expect(all).toMatchObject({ paymentAccountId: "acc-ubs", paymentAccountSource: "BANK_ACCOUNT" });
+    expect(s.accountRows.get("acc-ubs")!.bexioBankAccountId).toBe(9);
+    const list = await s.useCases.list({});
+    expect(list.every((d) => d.paymentAccountId === "acc-ubs")).toBe(true);
+    // Le choix survit à la synchronisation.
+    await s.useCases.setPaymentAccount(ID, "acc-cc");
+    await s.useCases.sync();
+    [one] = (await s.useCases.list({})).filter((d) => d.id === ID);
+    expect(one.paymentAccountId).toBe("acc-cc");
   });
 });

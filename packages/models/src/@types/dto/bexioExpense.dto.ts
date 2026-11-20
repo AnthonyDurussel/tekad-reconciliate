@@ -30,8 +30,17 @@ export interface BexioExpenseDTO {
   currency: string;
   bookingAccountNo: string | null;
   bookingAccountName: string | null;
+  /** Compte bancaire bexio payeur (id bexio) et son n° du plan comptable. */
+  bankAccountId: number | null;
+  bankAccountNo: string | null;
   paymentAccountId: string | null;
   paymentAccountName: string | null;
+  /**
+   * Comment le compte de paiement a été retrouvé : choisi sur la dépense
+   * (`MANUAL`), par le compte bancaire bexio associé au compte de paiement
+   * (`BANK_ACCOUNT`), par le n° du plan comptable (`ACCOUNT_NO`).
+   */
+  paymentAccountSource: "MANUAL" | "BANK_ACCOUNT" | "ACCOUNT_NO" | null;
   /** Rapprochement exigé par le compte payeur (`null` : compte inconnu). */
   reconciliation: ReconciliationModeDTO | null;
   /** Fichiers joints dans bexio. */
@@ -61,4 +70,28 @@ export interface BexioExpenseQueryDTO {
 /** `POST bexio-expenses/{id}/link` : la pièce à joindre à la dépense bexio. */
 export interface LinkBexioExpenseDTO {
   expenseId: string;
+}
+
+/** Un fichier joint à la dépense dans bexio. */
+export interface BexioAttachmentDTO {
+  uuid: string;
+  /** `null` : nom non lu (bexio injoignable). */
+  name: string | null;
+  mimeType: string | null;
+}
+
+/** `GET bexio-expenses/{id}` : la dépense et ses fichiers joints. */
+export interface BexioExpenseDetailDTO extends BexioExpenseDTO {
+  attachments: BexioAttachmentDTO[];
+}
+
+/**
+ * `PUT bexio-expenses/{id}/payment-account` : le compte de paiement de la
+ * dépense (`null` : de nouveau déduit). `applyToBankAccount` associe le
+ * compte bancaire bexio de la dépense à ce compte de paiement : toutes ses
+ * dépenses le suivent.
+ */
+export interface SetBexioExpenseAccountDTO {
+  paymentAccountId: string | null;
+  applyToBankAccount?: boolean;
 }

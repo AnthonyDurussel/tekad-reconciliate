@@ -1,6 +1,16 @@
 import { inject, injectable } from "inversify";
-import { type BexioExpenseDTO, type BexioExpenseQueryDTO } from "@repo/models";
-import { ConflictError, NotFoundError } from "@/shared/domain/errors.js";
+import type {
+  BexioExpenseDetailDTO,
+  BexioExpenseDTO,
+  BexioExpenseQueryDTO,
+} from "@repo/models";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "@/shared/domain/errors.js";
+import type { StoredFile } from "@/shared/application/ports/StoredFile.js";
+import { log } from "@/shared/infrastructure/logging/logger.js";
 import { dayToDate } from "@/shared/domain/dates.js";
 import type { IBexioGateway } from "@/bexio/application/ports/IBexioGateway.js";
 import { BEXIO_TYPES } from "@/bexio/infrastructure/ioc/types.bexio.js";
@@ -135,20 +145,36 @@ export class BexioExpenseUseCases {
 
   private async toDTOs(rows: StoredBexioExpense[]): Promise<BexioExpenseDTO[]> {
     const accounts = await this.settings.listPaymentAccounts();
+    const byId = new Map(accounts.map((a) => [a.id, a]));
+    const byBank = new Map(
+      accounts
+        .filter((a) => a.bexioBankAccountId)
+        .map((a) => [a.bexioBankAccountId!, a]),
+    );
     const byAccountNo = new Map(
       accounts
         .filter((a) => a.bexioAccountNo)
         .map((a) => [a.bexioAccountNo!, a]),
     );
+    /** Choisi sur la dépense › compte bancaire associé › n° du plan comptable. */
+    const resolve = (r: StoredBexioExpense) => {
+      const manual = r.paymentAccountId
+        ? byId.get(r.paymentAccountId)
+        : undefined;
+      if (manual) return { account: manual, source: "MANUAL" as const };
+      const bank = r.bankAccountId ? byBank.get(r.bankAccountId) : undefined;
+      if (bank) return { account: bank, source: "BANK_ACCOUNT" as const };
+      const no = r.bankAccountNo ? byAccountNo.get(r.bankAccountNo) : undefined;
+      if (no) return { account: no, source: "ACCOUNT_NO" as const };
+      return { account: undefined, source: null };
+    };
     const pieces = new Map(
       (await this.expenses.findByBexioExpenseIds(rows.map((r) => r.id))).map(
         (e) => [e.snapshot.bexioExpenseId!, e],
       ),
     );
     return rows.map((r) => {
-      const account = r.bankAccountNo
-        ? byAccountNo.get(r.bankAccountNo)
-        : undefined;
+      const { account, source } = resolve(r);
       const piece = pieces.get(r.id);
       const check = checkBexioExpense({
         status: r.status,
@@ -170,8 +196,11 @@ export class BexioExpenseUseCases {
         currency: r.currency,
         bookingAccountNo: r.bookingAccountNo,
         bookingAccountName: r.bookingAccountName,
+        bankAccountId: r.bankAccountId,
+        bankAccountNo: r.bankAccountNo,
         paymentAccountId: account?.id ?? null,
         paymentAccountName: account?.name ?? null,
+        paymentAccountSource: source,
         reconciliation: account?.reconciliation ?? null,
         attachmentCount: r.attachmentIds.length,
         expenseId: piece?.id ?? null,
@@ -191,7 +220,98 @@ export class BexioExpenseUseCases {
     return (await this.toDTOs([row]))[0];
   }
 
-  get(id: string) {
+  /** La dépense et ses fichiers joints (noms lus dans bexio). */
+  async get(id: string): Promise<BexioExpenseDetailDTO> {
+    const dto = await this.one(id);
+    const row = (await this.repository.find(id))!;
+    const attachments = await Promise.all(
+      row.attachmentIds.map(async (uuid) => {
+        try {
+          const file = await this.bexio.findFileByUuid(uuid);
+          return {
+            uuid,
+            name: file?.name ?? null,
+            mimeType: file?.mimeType ?? null,
+          };
+        } catch (error) {
+          log.warn(`[bexio] fichier ${uuid} illisible`, error);
+          return { uuid, name: null, mimeType: null };
+        }
+      }),
+    );
+    return { ...dto, attachments };
+  }
+
+  /**
+   * Un fichier joint à la dépense dans bexio, ou celui de la pièce liée :
+   * jamais un autre fichier de bexio.
+   */
+  async file(id: string, uuid: string): Promise<StoredFile> {
+    const row = await this.repository.find(id);
+    if (!row) throw new NotFoundError("Bexio expense");
+    const piece = (await this.expenses.findByBexioExpenseIds([id]))[0];
+    if (!row.attachmentIds.includes(uuid)) {
+      if (piece && piece.snapshot.bexioFileUuid === uuid) {
+        return this.bexio.downloadFile(piece.snapshot.bexioFileId);
+      }
+      throw new NotFoundError("Attachment");
+    }
+    const found = await this.bexio.findFileByUuid(uuid);
+    if (!found) throw new NotFoundError("Attachment");
+    const file = await this.bexio.downloadFile(found.id);
+    return {
+      ...file,
+      fileName: found.name,
+      mimeType: found.mimeType ?? file.mimeType,
+    };
+  }
+
+  /**
+   * Le compte de paiement de la dépense (`null` : de nouveau déduit). Avec
+   * `applyToBankAccount`, le compte bancaire bexio de la dépense est associé
+   * à ce compte de paiement : toutes ses dépenses le suivent (le choix posé
+   * sur cette dépense-ci est alors retiré, il n'est plus utile).
+   */
+  async setPaymentAccount(
+    id: string,
+    paymentAccountId: string | null,
+    applyToBankAccount = false,
+  ): Promise<BexioExpenseDTO> {
+    const row = await this.repository.find(id);
+    if (!row) throw new NotFoundError("Bexio expense");
+    if (!paymentAccountId) {
+      await this.repository.setPaymentAccount(id, null);
+      return this.one(id);
+    }
+    const account = await this.settings.findPaymentAccount(paymentAccountId);
+    if (!account) throw new NotFoundError("Payment account");
+    if (!applyToBankAccount) {
+      await this.repository.setPaymentAccount(id, paymentAccountId);
+      return this.one(id);
+    }
+    if (!row.bankAccountId) {
+      throw new ValidationError(
+        "cette dépense bexio n'indique pas de compte bancaire",
+      );
+    }
+    // Le compte bancaire bexio ne va qu'à un compte de paiement.
+    for (const other of await this.settings.listPaymentAccounts()) {
+      if (
+        other.id !== account.id &&
+        other.bexioBankAccountId === row.bankAccountId
+      ) {
+        const { expenseCount: _count, ...plain } = other;
+        await this.settings.savePaymentAccount(
+          { ...plain, bexioBankAccountId: null },
+          false,
+        );
+      }
+    }
+    await this.settings.savePaymentAccount(
+      { ...account, bexioBankAccountId: row.bankAccountId },
+      false,
+    );
+    await this.repository.setPaymentAccount(id, null);
     return this.one(id);
   }
 

@@ -105,6 +105,7 @@ function setup(readings: Record<string, ExtractionDTO>) {
     listTaxes: async () => [],
     listBankAccounts: async () => [{ id: 5, name: "Revolut", accountId: 2, iban: null }],
     fileUuid: async (id) => `uuid-${id}`,
+    findFileByUuid: async () => null,
     listExpenses: async () => [],
     createExpense: async (input) => {
       created.push(input);
