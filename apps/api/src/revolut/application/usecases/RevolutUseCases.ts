@@ -4,12 +4,16 @@ import {
   normalizeText,
   type RevolutImportResultDTO,
 } from "@repo/models";
+import { randomUUID } from "node:crypto";
 import {
   InvalidStateError,
   NotFoundError,
   ValidationError,
 } from "@/shared/domain/errors.js";
-import { parseRevolutStatement } from "@/revolut/domain/RevolutStatement.js";
+import {
+  parseRevolutStatement,
+  type StatementCard,
+} from "@/revolut/domain/RevolutStatement.js";
 import type {
   IRevolutTransactionRepository,
   RevolutTransactionFilter,
@@ -65,7 +69,7 @@ export class RevolutUseCases {
     content: string,
     paymentAccountId: string | null,
   ): Promise<StatementImport> {
-    const { rows, errors } = parseRevolutStatement(content);
+    const { rows, errors, cards } = parseRevolutStatement(content);
     if (!rows.length) {
       throw new ValidationError(errors[0] ?? "aucune transaction lisible");
     }
@@ -86,13 +90,15 @@ export class RevolutUseCases {
         .filter((a) => a.revolutAccountId)
         .map((a) => [normalizeText(a.revolutAccountId), a.id]),
     );
+    const accountOf = (revolutAccountId: string) =>
+      byName.get(normalizeText(revolutAccountId)) ?? fallback;
     const { created, updated } = await this.transactions.upsertMany(
       rows.map((r) => ({
         ...r,
-        paymentAccountId:
-          byName.get(normalizeText(r.revolutAccountId)) ?? fallback,
+        paymentAccountId: accountOf(r.revolutAccountId),
       })),
     );
+    const cardsAdded = await this.addStatementCards(cards, accountOf);
     const days = rows
       .map((r) => r.occurredAt.toISOString().slice(0, 10))
       .sort();
@@ -103,6 +109,49 @@ export class RevolutUseCases {
       errors: errors.slice(0, 50),
       from: days[0] ?? null,
       to: days[days.length - 1] ?? null,
+      cardsAdded,
     };
+  }
+
+  /**
+   * Les cartes du relevé encore inconnues rejoignent leur compte Revolut
+   * (forme masquée et libellé de Revolut) : les tickets payés avec elles
+   * seront classés sur ce compte. Une carte déjà connue — sur n'importe quel
+   * compte — n'est pas touchée.
+   */
+  private async addStatementCards(
+    cards: StatementCard[],
+    accountOf: (revolutAccountId: string) => string | null,
+  ): Promise<string[]> {
+    if (!cards.length) return [];
+    const accounts = await this.settings.listPaymentAccounts();
+    const known = new Set(accounts.flatMap((a) => a.cards.map((c) => c.last4)));
+    const added: string[] = [];
+    for (const card of cards) {
+      if (known.has(card.last4)) continue;
+      const account = accounts.find(
+        (a) => a.id === accountOf(card.revolutAccountId),
+      );
+      if (!account || account.kind !== PaymentAccountKindDTO.REVOLUT) continue;
+      const { expenseCount: _count, ...plain } = account;
+      plain.cards = [
+        ...plain.cards,
+        {
+          id: randomUUID(),
+          last4: card.last4,
+          maskedNumber: card.maskedNumber,
+          label: card.label,
+          holder: null,
+          active: true,
+        },
+      ];
+      account.cards = plain.cards;
+      await this.settings.savePaymentAccount(plain, false);
+      known.add(card.last4);
+      added.push(
+        card.label ? `${card.maskedNumber} (${card.label})` : card.maskedNumber,
+      );
+    }
+    return added;
   }
 }

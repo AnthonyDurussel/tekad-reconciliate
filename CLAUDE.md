@@ -51,10 +51,12 @@ answer 409 — never a 500.
 | Notion                                                                                                                                                                                                                       | Code                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Compte de paiement: `REVOLUT`, `UBS`, `PERSONAL` (compte courant Anthony), `OTHER`; bexio account credited (`1021`, `1020`, `2210`…), booking mode `MANUAL_ENTRY` (the app posts) or `BEXIO_RECONCILIATION` (UBS: done in bexio) | `payment_accounts`, `PaymentAccountDTO`                  |
-| Carte: last 4 digits, unique; the card read on a receipt gives its payment account (`accountForCard()`)                                                                                                                     | `payment_cards`                                          |
-| Type de dépense: code, label, expense account (`6570`…), bexio `tax_id`, VAT rate, **keywords** and **MCC codes** (`categoryByRules()`)                                                                                     | `expense_categories`, `ExpenseCategoryDTO`               |
+| Carte: typed in full or masked in « Comptes et cartes » (`number`, never stored) → last 4 digits (unique) + masked form `516760******4721` (`maskCardNumber()`); also added automatically from the Revolut statement (`Card number`, `Card label`) to the Revolut account; the card read on a receipt gives its payment account (`accountForCard()`) | `payment_cards`                                          |
+| Type de dépense: **taken from the bexio chart of accounts** — one per active EXPENSE account (`POST expense-categories/sync-bexio`: code = account number, label = bexio name, bexio `tax_id` and its rate; default keyword / MCC rules by account number on creation, `DEFAULT_RULES_BY_ACCOUNT`; the user's rules kept; a type whose account left bexio is deactivated); **keywords** and **MCC codes** (`categoryByRules()`) | `expense_categories` (`bexio_account_id`), `ExpenseCategoryDTO` |
 | Pièce: one bexio inbox file; extraction, account (+ source CARD / TRANSACTION / MANUAL), type (+ source RULE / AI / MANUAL), booking overrides, Revolut transaction, bexio entry                                             | `expenses`, `ExpenseDTO`, `Expense` (domain)             |
 | Transaction Revolut: one statement row (ID + `Account`); `requiresReceipt()` (debit, completed/pending, not exchange/fee/topup/refund); may be ignored (« pas de pièce ») with a reason                                    | `revolut_transactions`, `RevolutTransactionDTO`          |
+
+bexio chart (`GET bexio/accounts`, `GET bexio/taxes`, port `IBexioGateway.listAccounts/listTaxes`): with bexio configured, an expense type's account must be an EXPENSE account and a payment account's an ASSET or LIABILITY account of the chart (400 otherwise); without bexio the number is taken as typed. The screens pick accounts and VAT codes from these lists (free text when bexio answers 409).
 
 Status (`expenseStatus()`): `NEW` (not read) → `TO_REVIEW` / `READY` (computed: date, amount,
 payment account, type, and **for Revolut the matched transaction**) → `BOOKED`; `IGNORED` aside.
@@ -71,7 +73,8 @@ Columns found by name (English export: `Date started (UTC)`, `Date completed (UT
 account); `Orig amount` in its currency = `billAmount` for matching. Unique (ID, Account): re-importing
 or overlapping statements updates, never duplicates. Rows go to the payment account whose
 `revolutAccountId` equals `Account` (case-insensitive), else the one chosen, else the only active
-Revolut account. The import then runs the matching.
+Revolut account. Unknown cards of the statement join that Revolut account (`cardsAdded`). The
+import then runs the matching.
 
 Matching (`scoreMatch()`, `autoMatch()`): amount is mandatory (account amount, or bill amount in the
 receipt currency, ±0.01), date ≤ 5 days, card, merchant similarity; auto-match at ≥ 70 points and
@@ -107,6 +110,8 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `GET config/backend`; `POST roles`, `GET health` (public)                                    | authenticated / —                  |                                                                   |
 | `GET payment-accounts`, `GET expense-categories`                                             | `EXPENSE_VIEW` or `SETTINGS_MANAGE` | `PaymentAccountDTO[]` / `ExpenseCategoryDTO[]` (`expenseCount`)  |
 | `POST`, `PUT/DELETE …/{id}` on both                                                          | `SETTINGS_MANAGE`                  | delete → 409 while used: deactivate                               |
+| `POST expense-categories/sync-bexio`                                                         | `SETTINGS_MANAGE`                  | → `CategorySyncResultDTO`; 409 without bexio                      |
+| `GET bexio/accounts`, `GET bexio/taxes`                                                      | `EXPENSE_VIEW` or `SETTINGS_MANAGE` | `BexioAccountDTO[]` / `BexioTaxDTO[]`; 409 without bexio          |
 | `GET expenses?from&to&paymentAccountId&categoryId&status&search`                             | `EXPENSE_VIEW`                     | `ExpenseDTO[]` (`paymentAccountId=none` / `categoryId=none`: unset) |
 | `GET expenses/export?…same filters`                                                          | `EXPENSE_VIEW`                     | `.xlsx`                                                           |
 | `GET expenses/{id}`, `GET expenses/{id}/candidates`, `GET expenses/{id}/file`                | `EXPENSE_VIEW`                     | `ExpenseDTO` (+ `transaction`) / `MatchCandidateDTO[]` / the file |
@@ -154,7 +159,7 @@ Home: `/dashboard`.
 From the repo root: `pnpm install`, `pnpm build`, `pnpm lint`, `pnpm test`.
 
 - `packages/models`: `pnpm build`, `pnpm test`.
-- `apps/api`: `pnpm dev`, **`pnpm dev:server`** (routes on :7071 without Azure Functions Core Tools), `pnpm build`, `pnpm test`, `pnpm migrate` / `pnpm migrate:deploy`, `pnpm seed` (payment accounts + Swiss SME expense types, idempotent).
+- `apps/api`: `pnpm dev`, **`pnpm dev:server`** (routes on :7071 without Azure Functions Core Tools), `pnpm build`, `pnpm test`, `pnpm migrate` / `pnpm migrate:deploy`, `pnpm seed` (payment accounts — expense types come from bexio; idempotent).
 - `apps/frontend`: `pnpm dev` (Vite, proxies `/api` to :7071, mocks `/.auth`), `pnpm build`, `pnpm vitest`, `pnpm check-i18n`, `pnpm typecheck`.
 
 ## Deployment (Azure)

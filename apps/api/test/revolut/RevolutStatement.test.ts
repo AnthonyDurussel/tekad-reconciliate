@@ -115,10 +115,12 @@ describe("RevolutUseCases.importStatement", () => {
         return { created: rows.length, updated: 0 };
       },
     } as unknown as IRevolutTransactionRepository;
+    const saved: typeof accounts = [];
     const settings = {
       listPaymentAccounts: async () => accounts.map((a) => ({ ...a, expenseCount: 0 })),
+      savePaymentAccount: async (a: (typeof accounts)[number]) => void saved.push(a),
     } as unknown as ISettingsRepository;
-    return { useCases: new RevolutUseCases(repo, settings), stored };
+    return { useCases: new RevolutUseCases(repo, settings), stored, saved };
   }
 
   it("rattache au seul compte Revolut et rend la période", async () => {
@@ -149,6 +151,18 @@ describe("RevolutUseCases.importStatement", () => {
     ]);
     await useCases.importStatement(STATEMENT, null);
     expect(stored.every((r) => r.paymentAccountId === revolut.id)).toBe(true);
+  });
+
+  it("ajoute au compte Revolut les cartes inconnues du relevé", async () => {
+    const { useCases, saved } = setup([{ ...revolut, cards: [] }, ubs]);
+    const result = await useCases.importStatement(STATEMENT, null);
+    expect(result.cardsAdded).toEqual(["516760******4821 (Abo Internet)"]);
+    expect(saved[0].cards).toMatchObject([
+      { last4: "4821", maskedNumber: "516760******4821", label: "Abo Internet" },
+    ]);
+    // Déjà connue : rien.
+    const again = setup();
+    expect((await again.useCases.importStatement(STATEMENT, null)).cardsAdded).toEqual([]);
   });
 
   it("fichier illisible : 400", async () => {

@@ -27,8 +27,16 @@ export enum BookingModeDTO {
 
 export interface PaymentCardDTO {
   id?: string;
+  /**
+   * Saisie : le numéro de la carte, entier ou masqué (« 5167 6012 3456 4721 »,
+   * « 516760******4721 »). Il n'est **jamais gardé** : l'API n'en retient que
+   * les 4 derniers chiffres et la forme masquée.
+   */
+  number?: string;
   /** 4 derniers chiffres imprimés sur le ticket (`**** 1234`). */
   last4: string;
+  /** Forme masquée (6 premiers et 4 derniers chiffres), pour la reconnaître. */
+  maskedNumber?: string | null;
   label?: string | null;
   holder?: string | null;
   active?: boolean;
@@ -67,6 +75,8 @@ export type UpdatePaymentAccountDTO = Partial<CreatePaymentAccountDTO>;
 /** Type de dépense : son compte de charge et la TVA par défaut. */
 export interface ExpenseCategoryDTO {
   id: string;
+  /** Le compte de charge bexio dont le type est repris (`null` : saisi à la main). */
+  bexioAccountId: number | null;
   code: string;
   label: string;
   /** Compte de charge débité (ex. 6570 Informatique). */
@@ -85,6 +95,7 @@ export interface ExpenseCategoryDTO {
 }
 
 export interface CreateExpenseCategoryDTO {
+  bexioAccountId?: number | null;
   code: string;
   label: string;
   bexioAccountNo: string;

@@ -62,6 +62,32 @@ export function registerSettingsRoutes(app: HttpRouteRegistrar) {
     tx: true,
     handler: (c, r) => controller(c).createCategory(r),
   });
+  // Avant `expense-categories/{id}` (route fixe).
+  route(app, {
+    name: "syncExpenseCategoriesFromBexio",
+    methods: ["POST"],
+    path: "expense-categories/sync-bexio",
+    access: PermissionDTO.SETTINGS_MANAGE,
+    tx: false,
+    handler: (c) => controller(c).syncCategories(),
+  });
+  // Plan comptable et codes TVA de bexio (listes de choix ; 409 sans bexio).
+  route(app, {
+    name: "listBexioAccounts",
+    methods: ["GET"],
+    path: "bexio/accounts",
+    access: READ,
+    tx: false,
+    handler: (c) => controller(c).bexioAccounts(),
+  });
+  route(app, {
+    name: "listBexioTaxes",
+    methods: ["GET"],
+    path: "bexio/taxes",
+    access: READ,
+    tx: false,
+    handler: (c) => controller(c).bexioTaxes(),
+  });
   route(app, {
     name: "updateExpenseCategory",
     methods: ["PUT"],

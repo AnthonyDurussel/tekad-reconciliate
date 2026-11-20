@@ -92,6 +92,26 @@ describe("BexioHttpGateway", () => {
     ).rejects.toThrow(ConflictError);
   });
 
+  it("plan comptable et codes TVA", async () => {
+    const { impl } = fake({
+      "2.0/accounts": [
+        { id: 2, account_no: 6510, name: "Téléphone", account_type: 2, tax_id: 7, is_active: true },
+        { id: 1, account_no: "1020", name: "UBS", account_type: 3, is_active: true },
+        { id: 3, account_no: "9999", name: "?", account_type: 9, is_active: false },
+      ],
+      "3.0/taxes": [{ id: 7, name: "VB81", display_name: "VB81 - 8.1%", value: "8.1", type: "pre_tax", is_active: true }],
+    });
+    const gateway = new BexioHttpGateway("t", undefined, impl);
+    expect(await gateway.listAccounts()).toEqual([
+      { id: 1, accountNo: "1020", name: "UBS", type: "ASSET", taxId: null, active: true },
+      { id: 2, accountNo: "6510", name: "Téléphone", type: "EXPENSE", taxId: 7, active: true },
+      { id: 3, accountNo: "9999", name: "?", type: "OTHER", taxId: null, active: false },
+    ]);
+    expect(await gateway.listTaxes()).toEqual([
+      { id: 7, code: "VB81", label: "VB81 - 8.1%", rate: 8.1, type: "pre_tax", active: true },
+    ]);
+  });
+
   it("sans jeton : non configuré", () => {
     expect(createBexioGateway({}).configured).toBe(false);
   });

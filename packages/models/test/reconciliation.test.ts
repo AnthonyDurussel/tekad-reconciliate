@@ -220,3 +220,15 @@ describe("expenseStatus / bookingProposal", () => {
     expect(p.missing).toEqual(["amountChf"]);
   });
 });
+
+import { maskCardNumber } from "../src/index.js";
+
+describe("maskCardNumber", () => {
+  it("garde 6 premiers + 4 derniers, jamais le numéro entier", () => {
+    expect(maskCardNumber("5167 6012 3456 4721")).toEqual({ last4: "4721", masked: "516760******4721" });
+    expect(maskCardNumber("516760******4721")).toEqual({ last4: "4721", masked: "516760******4721" });
+    expect(maskCardNumber("**** 4721")).toEqual({ last4: "4721", masked: "************4721" });
+    expect(maskCardNumber("4721")).toEqual({ last4: "4721", masked: "************4721" });
+    expect(maskCardNumber("abc")).toBeNull();
+  });
+});

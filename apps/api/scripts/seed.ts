@@ -1,9 +1,9 @@
 /**
- * Amorçage du paramétrage : comptes de paiement (Revolut, UBS, compte
- * courant d'Anthony) et types de dépense d'une PME suisse (plan comptable
- * PME/KMU). Idempotent : un compte se retrouve par son nom, un type par son
- * code ; rien d'existant n'est modifié. Les cartes et les codes TVA bexio
- * (`tax_id`) se règlent ensuite dans l'administration.
+ * Amorçage du paramétrage : les comptes de paiement (Revolut, UBS, compte
+ * courant d'Anthony). Idempotent : un compte se retrouve par son nom ; rien
+ * d'existant n'est modifié. Les types de dépense viennent du plan comptable
+ * bexio (« Synchroniser avec bexio » dans Types de dépense) ; les cartes se
+ * saisissent dans Comptes et cartes, ou arrivent avec le relevé Revolut.
  *
  * Puis, sauf `SEED_DEMO=false` (toujours en production), quelques pièces et
  * transactions Revolut de démonstration (`demo-*`), pour l'interface.
@@ -42,157 +42,6 @@ const ACCOUNTS = [
   },
 ];
 
-const CATEGORIES: {
-  code: string;
-  label: string;
-  bexio_account_no: string;
-  vat_rate: number | null;
-  keywords: string[];
-  mcc_codes: string[];
-}[] = [
-  {
-    code: "IT",
-    label: "Informatique et logiciels",
-    bexio_account_no: "6570",
-    vat_rate: 8.1,
-    keywords: [
-      "google",
-      "microsoft",
-      "adobe",
-      "github",
-      "aws",
-      "amazon web services",
-      "openai",
-      "anthropic",
-      "notion",
-      "atlassian",
-      "slack",
-      "zoom",
-      "figma",
-      "jetbrains",
-      "vercel",
-      "azure",
-      "infomaniak",
-      "hostpoint",
-    ],
-    mcc_codes: ["5734", "5817", "5818", "7372", "4816"],
-  },
-  {
-    code: "MATINFO",
-    label: "Matériel informatique",
-    bexio_account_no: "6570",
-    vat_rate: 8.1,
-    keywords: [
-      "digitec",
-      "galaxus",
-      "brack",
-      "interdiscount",
-      "apple store",
-      "fust",
-    ],
-    mcc_codes: ["5732", "5045"],
-  },
-  {
-    code: "TEL",
-    label: "Téléphone et internet",
-    bexio_account_no: "6510",
-    vat_rate: 8.1,
-    keywords: ["swisscom", "salt", "sunrise", "wingo", "yallo"],
-    mcc_codes: ["4814", "4899"],
-  },
-  {
-    code: "REPAS",
-    label: "Repas et représentation",
-    bexio_account_no: "6640",
-    vat_rate: 8.1,
-    keywords: ["restaurant", "café", "cafe", "brasserie", "pizzeria", "bistro"],
-    mcc_codes: ["5812", "5813", "5814"],
-  },
-  {
-    code: "DEPL",
-    label: "Déplacements (train, avion, hôtel)",
-    bexio_account_no: "6640",
-    vat_rate: 8.1,
-    keywords: [
-      "sbb",
-      "cff",
-      "ffs",
-      "easyjet",
-      "swiss international",
-      "lufthansa",
-      "booking com",
-      "airbnb",
-      "uber",
-      "hotel",
-      "mobility",
-    ],
-    mcc_codes: ["4111", "4112", "4121", "4131", "4511", "7011"],
-  },
-  {
-    code: "VEHI",
-    label: "Véhicule et carburant",
-    bexio_account_no: "6200",
-    vat_rate: 8.1,
-    keywords: [
-      "shell",
-      "avia",
-      "tamoil",
-      "migrol",
-      "socar",
-      "eni",
-      "parking",
-      "bp",
-    ],
-    mcc_codes: ["5541", "5542", "7523"],
-  },
-  {
-    code: "BUREAU",
-    label: "Fournitures et frais de bureau",
-    bexio_account_no: "6500",
-    vat_rate: 8.1,
-    keywords: ["papeterie", "office world", "poste", "la poste"],
-    mcc_codes: ["5111", "5943", "9402"],
-  },
-  {
-    code: "PUB",
-    label: "Marketing et publicité",
-    bexio_account_no: "6600",
-    vat_rate: 8.1,
-    keywords: [
-      "linkedin",
-      "meta platforms",
-      "facebook",
-      "google ads",
-      "mailchimp",
-    ],
-    mcc_codes: ["7311"],
-  },
-  {
-    code: "FORM",
-    label: "Formation",
-    bexio_account_no: "5810",
-    vat_rate: 8.1,
-    keywords: ["udemy", "coursera", "formation"],
-    mcc_codes: ["8299"],
-  },
-  {
-    code: "BANQUE",
-    label: "Frais bancaires",
-    bexio_account_no: "6940",
-    vat_rate: null,
-    keywords: ["frais bancaires", "commission"],
-    mcc_codes: [],
-  },
-  {
-    code: "DIVERS",
-    label: "Autres charges",
-    bexio_account_no: "6700",
-    vat_rate: 8.1,
-    keywords: [],
-    mcc_codes: [],
-  },
-];
-
 async function seedSettings() {
   let created = 0;
   for (const [position, a] of ACCOUNTS.entries()) {
@@ -200,14 +49,6 @@ async function seedSettings() {
       !(await prisma.paymentAccountDB.findUnique({ where: { name: a.name } }))
     ) {
       await prisma.paymentAccountDB.create({ data: { ...a, position } });
-      created++;
-    }
-  }
-  for (const [position, c] of CATEGORIES.entries()) {
-    if (
-      !(await prisma.expenseCategoryDB.findUnique({ where: { code: c.code } }))
-    ) {
-      await prisma.expenseCategoryDB.create({ data: { ...c, position } });
       created++;
     }
   }

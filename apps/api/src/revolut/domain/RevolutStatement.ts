@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { last4OfMasked, normalizeText, requiresReceipt } from "@repo/models";
+import {
+  last4OfMasked,
+  maskCardNumber,
+  normalizeText,
+  requiresReceipt,
+} from "@repo/models";
 import type { RevolutTransactionImport } from "@/revolut/domain/RevolutTransaction.js";
 
 /**
@@ -36,6 +41,7 @@ type Field =
   | "reference"
   | "payer"
   | "card"
+  | "cardLabel"
   | "origCurrency"
   | "origAmount"
   | "currency"
@@ -72,6 +78,7 @@ const ALIASES: Record<Field, string[]> = {
   reference: ["reference"],
   payer: ["payer", "payeur"],
   card: ["card number", "card", "numero de carte", "carte"],
+  cardLabel: ["card label", "libelle de la carte", "nom de la carte"],
   origCurrency: [
     "orig currency",
     "original currency",
@@ -93,9 +100,19 @@ const ALIASES: Record<Field, string[]> = {
   merchant: ["merchant", "merchant name", "commercant", "nom du commercant"],
 };
 
+/** Une carte vue dans le relevé, sur un compte Revolut. */
+export interface StatementCard {
+  last4: string;
+  maskedNumber: string;
+  label: string | null;
+  revolutAccountId: string;
+}
+
 export interface StatementParseResult {
   rows: RevolutTransactionImport[];
   errors: string[];
+  /** Cartes distinctes du relevé (par 4 derniers chiffres). */
+  cards: StatementCard[];
 }
 
 /** Séparateur le plus présent sur la ligne d'en-tête. */
@@ -284,7 +301,11 @@ export function parseRevolutStatement(text: string): StatementParseResult {
   const table = parseCsv(text);
   const errors: string[] = [];
   if (table.length < 2) {
-    return { rows: [], errors: ["le fichier ne contient aucune transaction"] };
+    return {
+      rows: [],
+      errors: ["le fichier ne contient aucune transaction"],
+      cards: [],
+    };
   }
   const header = table[0];
   const col = headerIndex(header);
@@ -294,12 +315,14 @@ export function parseRevolutStatement(text: string): StatementParseResult {
   if (missing.length) {
     return {
       rows: [],
+      cards: [],
       errors: [
         `colonnes introuvables (${missing.join(", ")}) — en-tête lu : ${header.join(" | ")}`,
       ],
     };
   }
   const rows: RevolutTransactionImport[] = [];
+  const cards = new Map<string, StatementCard>();
   const seen = new Map<string, number>();
   table.slice(1).forEach((cells, i) => {
     const line = i + 2;
@@ -336,6 +359,15 @@ export function parseRevolutStatement(text: string): StatementParseResult {
     const key = `${revolutId}|${account}`;
     const n = (seen.get(key) ?? 0) + 1;
     seen.set(key, n);
+    const card = maskCardNumber(get("card"));
+    if (card && !cards.has(card.last4)) {
+      cards.set(card.last4, {
+        last4: card.last4,
+        maskedNumber: card.masked,
+        label: get("cardLabel") ?? null,
+        revolutAccountId: account,
+      });
+    }
     rows.push({
       revolutId,
       legId: n === 1 ? account : `${account}#${n}`,
@@ -357,5 +389,5 @@ export function parseRevolutStatement(text: string): StatementParseResult {
       raw: Object.fromEntries(header.map((h, j) => [h, cells[j] ?? null])),
     });
   });
-  return { rows, errors };
+  return { rows, errors, cards: [...cards.values()] };
 }

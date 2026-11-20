@@ -27,6 +27,7 @@ type AccountRow = {
   cards: {
     id: string;
     last4: string;
+    masked_number: string | null;
     label: string | null;
     holder: string | null;
     active: boolean;
@@ -45,6 +46,7 @@ export const toPaymentAccount = (row: AccountRow): PaymentAccountProps => ({
   cards: row.cards.map((c) => ({
     id: c.id,
     last4: c.last4,
+    maskedNumber: c.masked_number,
     label: c.label,
     holder: c.holder,
     active: c.active,
@@ -53,6 +55,7 @@ export const toPaymentAccount = (row: AccountRow): PaymentAccountProps => ({
 
 type CategoryRow = {
   id: string;
+  bexio_account_id: number | null;
   code: string;
   label: string;
   bexio_account_no: string;
@@ -66,6 +69,7 @@ type CategoryRow = {
 
 export const toCategory = (row: CategoryRow): ExpenseCategoryProps => ({
   id: row.id,
+  bexioAccountId: row.bexio_account_id,
   code: row.code,
   label: row.label,
   bexioAccountNo: row.bexio_account_no,
@@ -136,6 +140,7 @@ export class PrismaSettingsRepository implements ISettingsRepository {
             id: c.id,
             account_id: account.id,
             last4: c.last4,
+            masked_number: c.maskedNumber,
             label: c.label,
             holder: c.holder,
             active: c.active,
@@ -179,6 +184,7 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     isNew: boolean,
   ): Promise<void> {
     const data = {
+      bexio_account_id: category.bexioAccountId,
       code: category.code,
       label: category.label,
       bexio_account_no: category.bexioAccountNo,
@@ -202,7 +208,9 @@ export class PrismaSettingsRepository implements ISettingsRepository {
       }
     } catch (error) {
       if (uniqueViolation(error)) {
-        throw new ConflictError(`le code ${category.code} existe déjà`);
+        throw new ConflictError(
+          `le code ${category.code} (ou ce compte bexio) a déjà son type de dépense`,
+        );
       }
       throw error;
     }

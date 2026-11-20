@@ -1,4 +1,5 @@
 import {
+  maskCardNumber,
   BookingModeDTO,
   PaymentAccountKindDTO,
   type CreatePaymentAccountDTO,
@@ -10,6 +11,8 @@ import { ValidationError } from "@/shared/domain/errors.js";
 export interface PaymentCard {
   id: string;
   last4: string;
+  /** 6 premiers + 4 derniers chiffres ; le numéro entier n'est jamais gardé. */
+  maskedNumber: string | null;
   label: string | null;
   holder: string | null;
   active: boolean;
@@ -40,13 +43,24 @@ function toCards(
   cards: PaymentCardDTO[] | undefined,
   newId: () => string,
 ): PaymentCard[] {
-  return (cards ?? []).map((c) => ({
-    id: c.id ?? newId(),
-    last4: c.last4.trim(),
-    label: c.label?.trim() || null,
-    holder: c.holder?.trim() || null,
-    active: c.active ?? true,
-  }));
+  return (cards ?? []).map((c) => {
+    const fromNumber = c.number ? maskCardNumber(c.number) : null;
+    if (c.number && (!fromNumber || fromNumber.last4 !== c.last4.trim())) {
+      throw new ValidationError(
+        "le numéro de carte ne finit pas par ses 4 chiffres",
+      );
+    }
+    return {
+      id: c.id ?? newId(),
+      last4: c.last4.trim(),
+      maskedNumber:
+        fromNumber?.masked ??
+        (c.maskedNumber?.trim() || maskCardNumber(c.last4)?.masked || null),
+      label: c.label?.trim() || null,
+      holder: c.holder?.trim() || null,
+      active: c.active ?? true,
+    };
+  });
 }
 
 function check(account: PaymentAccountProps): PaymentAccountProps {

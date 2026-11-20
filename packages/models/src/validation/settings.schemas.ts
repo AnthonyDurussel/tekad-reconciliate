@@ -15,16 +15,25 @@ const accountNo = () =>
     .trim()
     .matches(/^\d{3,6}$/, "compte bexio : 3 à 6 chiffres");
 
+/** Le numéro, s'il est donné, doit finir par les 4 chiffres annoncés. */
 const cardSchema: ObjectSchema<PaymentCardDTO> = strictObject({
   id: string().trim().uuid().optional(),
+  number: string()
+    .trim()
+    .max(40)
+    .matches(/^[\d\s*xX•.-]*\d{4}$/, "numéro de carte : il doit finir par 4 chiffres")
+    .optional(),
   last4: string()
     .trim()
     .matches(/^\d{4}$/, "carte : 4 chiffres")
     .required(),
+  maskedNumber: string().trim().max(40).nullable().optional(),
   label: string().trim().max(255).nullable().optional(),
   holder: string().trim().max(255).nullable().optional(),
   active: boolean().optional(),
-});
+}).test("number-last4", "le numéro ne finit pas par ces 4 chiffres", (card) =>
+  !card?.number || card.number.replace(/\D/g, "").endsWith(card.last4 ?? ""),
+) as ObjectSchema<PaymentCardDTO>;
 
 const accountShape = {
   kind: mixed<PaymentAccountKindDTO>().oneOf(Object.values(PaymentAccountKindDTO)),
@@ -59,6 +68,7 @@ const keywordList = () =>
   array(string().trim().min(2).max(60).required()).max(100).optional();
 
 const categoryShape = {
+  bexioAccountId: number().integer().min(1).nullable().optional(),
   code: string()
     .trim()
     .min(1)

@@ -36,6 +36,28 @@ export function detectCardLast4(text: string | null | undefined): string | null 
   return null;
 }
 
+/**
+ * Un numéro de carte saisi (entier, espacé ou masqué) : ses 4 derniers
+ * chiffres et une forme masquée — 6 premiers et 4 derniers chiffres quand il
+ * y en a assez, jamais le numéro entier. `null` sans 4 chiffres finaux.
+ */
+export function maskCardNumber(
+  input: string | null | undefined,
+): { last4: string; masked: string } | null {
+  const raw = (input ?? "").replace(/[\s-]/g, "");
+  const tail = /(\d{4})$/.exec(raw);
+  if (!tail) return null;
+  const digits = raw.replace(/\D/g, "");
+  const total = raw.length;
+  // Premiers chiffres connus (BIN) quand le numéro commence par eux.
+  const lead = /^(\d{6})/.exec(raw)?.[1] ?? null;
+  const length = Math.max(total, 16);
+  const masked = lead && digits.length >= 10
+    ? `${lead}${"*".repeat(Math.max(length - 10, 2))}${tail[1]}`
+    : `${"*".repeat(Math.max(length - 4, 4))}${tail[1]}`;
+  return { last4: tail[1], masked };
+}
+
 /** 4 derniers chiffres d'un numéro masqué Revolut (`459876******1234`). */
 export function last4OfMasked(masked: string | null | undefined): string | null {
   if (!masked) return null;

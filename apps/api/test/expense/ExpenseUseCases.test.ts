@@ -87,6 +87,8 @@ function setup(readings: Record<string, ExtractionDTO>) {
       mimeType: "application/pdf",
       data: Buffer.from(id),
     }),
+    listAccounts: async () => [],
+    listTaxes: async () => [],
     createManualEntry: async (input) => {
       entries.push(input);
       return "bexio-42";

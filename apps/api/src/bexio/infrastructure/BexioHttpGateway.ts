@@ -1,3 +1,8 @@
+import {
+  BexioAccountTypeDTO,
+  type BexioAccountDTO,
+  type BexioTaxDTO,
+} from "@repo/models";
 import type { StoredFile } from "@/shared/application/ports/StoredFile.js";
 import { ConflictError, InternalServerError } from "@/shared/domain/errors.js";
 import { log } from "@/shared/infrastructure/logging/logger.js";
@@ -18,9 +23,53 @@ interface BexioFileRow {
 
 interface BexioAccountRow {
   id: number;
-  account_no: string;
+  account_no: string | number;
   name: string;
+  account_type?: number | null;
+  tax_id?: number | null;
+  is_active?: boolean | null;
 }
+
+interface BexioTaxRow {
+  id: number;
+  name?: string | null;
+  code?: string | null;
+  display_name?: string | null;
+  value?: number | string | null;
+  type?: string | null;
+  is_active?: boolean | null;
+}
+
+/** `account_type` de bexio : 1 produits, 2 charges, 3 actifs, 4 passifs, 5 clôture. */
+const ACCOUNT_TYPES: Record<number, BexioAccountTypeDTO> = {
+  1: BexioAccountTypeDTO.EARNING,
+  2: BexioAccountTypeDTO.EXPENSE,
+  3: BexioAccountTypeDTO.ASSET,
+  4: BexioAccountTypeDTO.LIABILITY,
+  5: BexioAccountTypeDTO.CLOSING,
+};
+
+export const toBexioAccount = (r: BexioAccountRow): BexioAccountDTO => ({
+  id: r.id,
+  accountNo: String(r.account_no),
+  name: r.name,
+  type: ACCOUNT_TYPES[r.account_type ?? 0] ?? BexioAccountTypeDTO.OTHER,
+  taxId: r.tax_id ?? null,
+  active: r.is_active !== false,
+});
+
+export const toBexioTax = (r: BexioTaxRow): BexioTaxDTO => {
+  const rate =
+    r.value === null || r.value === undefined ? null : Number(r.value);
+  return {
+    id: r.id,
+    code: r.name ?? r.code ?? String(r.id),
+    label: r.display_name ?? r.name ?? String(r.id),
+    rate: rate !== null && Number.isFinite(rate) ? rate : null,
+    type: r.type ?? "unknown",
+    active: r.is_active !== false,
+  };
+};
 
 interface BexioCurrencyRow {
   id: number;
@@ -116,14 +165,21 @@ export class BexioHttpGateway implements IBexioGateway {
     };
   }
 
+  async listAccounts(): Promise<BexioAccountDTO[]> {
+    const rows = await this.json<BexioAccountRow[]>("2.0/accounts?limit=2000");
+    const accounts = rows.map(toBexioAccount);
+    this.accounts = new Map(accounts.map((a) => [a.accountNo, a.id]));
+    return accounts.sort((a, b) => a.accountNo.localeCompare(b.accountNo));
+  }
+
+  async listTaxes(): Promise<BexioTaxDTO[]> {
+    const rows = await this.json<BexioTaxRow[]>("3.0/taxes?limit=500");
+    return rows.map(toBexioTax);
+  }
+
   private async accountId(accountNo: string): Promise<number> {
-    if (!this.accounts) {
-      const rows = await this.json<BexioAccountRow[]>(
-        "2.0/accounts?limit=2000",
-      );
-      this.accounts = new Map(rows.map((r) => [String(r.account_no), r.id]));
-    }
-    const id = this.accounts.get(accountNo);
+    if (!this.accounts) await this.listAccounts();
+    const id = this.accounts!.get(accountNo);
     if (id === undefined) {
       throw new ConflictError(`le compte ${accountNo} n'existe pas dans bexio`);
     }
@@ -205,6 +261,12 @@ export class UnconfiguredBexioGateway implements IBexioGateway {
     this.fail();
   }
   downloadFile(): Promise<StoredFile> {
+    this.fail();
+  }
+  listAccounts(): Promise<BexioAccountDTO[]> {
+    this.fail();
+  }
+  listTaxes(): Promise<BexioTaxDTO[]> {
     this.fail();
   }
   createManualEntry(): Promise<string> {

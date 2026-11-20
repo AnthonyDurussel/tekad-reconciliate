@@ -59,4 +59,6 @@ export interface RevolutImportResultDTO {
   to: string | null;
   /** Pièces rapprochées automatiquement après l'import. */
   matched: number;
+  /** Cartes du relevé ajoutées au compte Revolut (forme masquée + libellé). */
+  cardsAdded: string[];
 }

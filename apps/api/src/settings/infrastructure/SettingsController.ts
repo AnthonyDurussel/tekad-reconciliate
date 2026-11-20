@@ -88,6 +88,21 @@ export class SettingsController {
     );
   }
 
+  /** POST expense-categories/sync-bexio */
+  async syncCategories(): Promise<HttpResponseInit> {
+    return ok(await this.useCases.syncCategoriesFromBexio());
+  }
+
+  /** GET bexio/accounts */
+  async bexioAccounts(): Promise<HttpResponseInit> {
+    return ok(await this.useCases.bexioAccounts());
+  }
+
+  /** GET bexio/taxes */
+  async bexioTaxes(): Promise<HttpResponseInit> {
+    return ok(await this.useCases.bexioTaxes());
+  }
+
   async deleteCategory(request: HttpRequest): Promise<HttpResponseInit> {
     await this.useCases.deleteCategory(pathId(request));
     return noContent();

@@ -16,7 +16,7 @@ export const revolut: PaymentAccountProps = {
   revolutAccountId: "rev-chf",
   position: 0,
   active: true,
-  cards: [{ id: "c1", last4: "4821", label: null, holder: null, active: true }],
+  cards: [{ id: "c1", last4: "4821", label: null, holder: null, active: true, maskedNumber: null }],
 };
 
 export const ubs: PaymentAccountProps = {
@@ -28,7 +28,7 @@ export const ubs: PaymentAccountProps = {
   revolutAccountId: null,
   position: 1,
   active: true,
-  cards: [{ id: "c2", last4: "7777", label: null, holder: null, active: true }],
+  cards: [{ id: "c2", last4: "7777", label: null, holder: null, active: true, maskedNumber: null }],
 };
 
 export const personal: PaymentAccountProps = {
@@ -40,7 +40,7 @@ export const personal: PaymentAccountProps = {
   revolutAccountId: null,
   position: 2,
   active: true,
-  cards: [{ id: "c3", last4: "1234", label: null, holder: null, active: true }],
+  cards: [{ id: "c3", last4: "1234", label: null, holder: null, active: true, maskedNumber: null }],
 };
 
 const category = (
@@ -51,6 +51,7 @@ const category = (
   mcc: string[] = [],
 ): ExpenseCategoryProps => ({
   id,
+  bexioAccountId: null,
   code,
   label: code,
   bexioAccountNo: account,

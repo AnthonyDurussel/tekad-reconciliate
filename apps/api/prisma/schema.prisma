@@ -63,12 +63,14 @@ model PaymentAccountDB {
 
 /// Carte reconnue sur les tickets par ses 4 derniers chiffres.
 model PaymentCardDB {
-  id         String  @id @default(uuid())
-  account_id String
-  last4      String  @unique
-  label      String?
-  holder     String?
-  active     Boolean @default(true)
+  id            String  @id @default(uuid())
+  account_id    String
+  last4         String  @unique
+  /// 6 premiers + 4 derniers chiffres ; le numéro entier n'est jamais gardé.
+  masked_number String?
+  label         String?
+  holder        String?
+  active        Boolean @default(true)
 
   account PaymentAccountDB @relation(fields: [account_id], references: [id], onDelete: Cascade)
 
@@ -78,6 +80,8 @@ model PaymentCardDB {
 /// Type de dépense : compte de charge, TVA, règles de reconnaissance.
 model ExpenseCategoryDB {
   id               String   @id @default(uuid())
+  /// Compte de charge du plan comptable bexio dont le type est repris.
+  bexio_account_id Int?     @unique
   code             String   @unique
   label            String
   bexio_account_no String
@@ -106,20 +110,20 @@ model ExpenseDB {
   mime_type     String?
   imported_at   DateTime @default(now())
 
-  date            DateTime? @db.Date
-  merchant        String?
-  description     String?
-  total_amount    Decimal?  @db.Decimal(12, 2)
-  currency        String?
-  vat_amount      Decimal?  @db.Decimal(12, 2)
-  vat_rate        Decimal?  @db.Decimal(5, 2)
-  card_last4      String?
-  payment_method  String?
+  date           DateTime? @db.Date
+  merchant       String?
+  description    String?
+  total_amount   Decimal?  @db.Decimal(12, 2)
+  currency       String?
+  vat_amount     Decimal?  @db.Decimal(12, 2)
+  vat_rate       Decimal?  @db.Decimal(5, 2)
+  card_last4     String?
+  payment_method String?
   /// Résultat brut de la lecture (`ExtractionDTO`).
-  extraction      Json?
-  extracted_at    DateTime?
+  extraction     Json?
+  extracted_at   DateTime?
   /// Champs saisis à la main : jamais écrasés par une relecture.
-  manual_fields   String[]
+  manual_fields  String[]
 
   payment_account_id     String?
   /// `SuggestionSourceDTO`
