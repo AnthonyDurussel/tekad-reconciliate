@@ -26,8 +26,6 @@ export interface PaymentAccountProps {
   kind: PaymentAccountKindDTO;
   name: string;
   bexioAccountNo: string | null;
-  /** Compte bancaire bexio associé (dépenses bexio payées depuis lui). */
-  bexioBankAccountId: number | null;
   reconciliation: ReconciliationModeDTO;
   statementFormat: StatementFormatDTO | null;
   /** Découle de `reconciliation`. */
@@ -132,7 +130,6 @@ export function createPaymentAccount(
     kind: input.kind,
     name: input.name.trim(),
     bexioAccountNo: input.bexioAccountNo ?? null,
-    bexioBankAccountId: input.bexioBankAccountId ?? null,
     reconciliation,
     statementFormat:
       input.statementFormat ??
@@ -156,10 +153,6 @@ export function patchPaymentAccount(
   return check({
     ...current,
     kind: input.kind ?? current.kind,
-    bexioBankAccountId:
-      input.bexioBankAccountId !== undefined
-        ? input.bexioBankAccountId
-        : current.bexioBankAccountId,
     reconciliation,
     statementFormat:
       input.statementFormat !== undefined

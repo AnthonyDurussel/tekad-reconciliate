@@ -403,22 +403,21 @@
     },
     "account": {
       "title": "Compte payeur",
-      "bank": "Compte bancaire bexio",
-      "bankId": "(id bexio {{id}})",
-      "bankOwner": "Associé au compte de paiement « {{name}} »",
-      "noBank": "Aucun compte bancaire dans bexio",
+      "bank": "Compte du plan comptable bexio",
+      "noBank": "Aucun compte bancaire indiqué dans bexio",
       "source": {
         "MANUAL": "choisi sur cette dépense",
-        "BANK_ACCOUNT": "compte bancaire bexio associé",
-        "ACCOUNT_NO": "par le n° de compte",
+        "ACCOUNT_NO": "par le compte du plan comptable associé",
         "UNKNOWN": "inconnu : choisissez le compte de paiement"
       },
       "choose": "Compte de paiement",
       "choosePlaceholder": "Choisir un compte",
-      "applyToBank": "Pour toutes les dépenses de ce compte bancaire bexio",
-      "applyToBankHint": "Associe le compte bancaire bexio (id {{id}}) à ce compte de paiement, dans « Comptes et cartes » : toutes les dépenses payées depuis lui le suivront.",
-      "applyToBankDisabled": "Indisponible : la dépense n'a pas de compte bancaire bexio.",
-      "automatic": "Revenir à l'automatique"
+      "automatic": "Revenir à l'automatique",
+      "chartOwner": "associé au compte « {{name}} »",
+      "chartFree": "associé à aucun compte de l'application",
+      "applyToAccount": "Associer ce compte au compte du plan comptable {{no}}",
+      "applyToAccountHint": "Le compte bexio du compte de paiement devient {{no}} (il sert aussi au crédit de ses écritures) : toutes les dépenses payées depuis ce compte le suivront.",
+      "applyToAccountDisabled": "Le compte bancaire de cette dépense n'a pas de compte du plan comptable : choix pour cette dépense seulement."
     },
     "receipt": {
       "noLinked": "Aucune pièce de l'application liée.",
@@ -495,13 +494,7 @@
         "NONE": "Aucun relevé (ex. compte courant, espèces) : la pièce suffit, l'application passe l'écriture."
       },
       "statementFormat": "Format du relevé",
-      "statementFormatHint": "L'export CSV dont ce compte reçoit l'import.",
-      "bexioBank": {
-        "associated": "Compte bancaire bexio n° {{id}} associé",
-        "dissociate": "Dissocier",
-        "dissociateTitle": "Dissocier le compte bancaire bexio ?",
-        "dissociateConfirm": "Le compte bancaire bexio n° {{id}} ne sera plus associé à « {{name}} » : ses dépenses retrouveront leur compte par le n° du plan comptable."
-      }
+      "statementFormatHint": "L'export CSV dont ce compte reçoit l'import."
     },
     "categories": {
       "title": "Types de dépense",

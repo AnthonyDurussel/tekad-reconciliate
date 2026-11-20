@@ -403,22 +403,21 @@
     },
     "account": {
       "title": "Paying account",
-      "bank": "bexio bank account",
-      "bankId": "(bexio id {{id}})",
-      "bankOwner": "Associated with payment account “{{name}}”",
+      "bank": "bexio chart account",
       "noBank": "No bank account in bexio",
       "source": {
         "MANUAL": "chosen on this expense",
-        "BANK_ACCOUNT": "associated bexio bank account",
-        "ACCOUNT_NO": "by account number",
+        "ACCOUNT_NO": "by the associated chart account",
         "UNKNOWN": "unknown: choose the payment account"
       },
       "choose": "Payment account",
       "choosePlaceholder": "Choose an account",
-      "applyToBank": "For every expense of this bexio bank account",
-      "applyToBankHint": "Associates the bexio bank account (id {{id}}) with this payment account, in “Accounts and cards”: every expense paid from it will follow.",
-      "applyToBankDisabled": "Unavailable: the expense has no bexio bank account.",
-      "automatic": "Back to automatic"
+      "automatic": "Back to automatic",
+      "chartOwner": "associated with « {{name}} »",
+      "chartFree": "not associated with any app account",
+      "applyToAccount": "Associate this account with chart account {{no}}",
+      "applyToAccountHint": "The payment account's bexio account becomes {{no}} (also credited by its bookings): every expense paid from it will follow.",
+      "applyToAccountDisabled": "This expense's bank account has no chart account: choice for this expense only."
     },
     "receipt": {
       "noLinked": "No receipt of the app linked.",
@@ -495,13 +494,7 @@
         "NONE": "No statement (e.g. current account, cash): the receipt is enough, the app posts the entry."
       },
       "statementFormat": "Statement format",
-      "statementFormatHint": "The CSV export imported into this account.",
-      "bexioBank": {
-        "associated": "bexio bank account no. {{id}} associated",
-        "dissociate": "Dissociate",
-        "dissociateTitle": "Dissociate the bexio bank account?",
-        "dissociateConfirm": "bexio bank account no. {{id}} will no longer be associated with “{{name}}”: its expenses will find their account by chart account number again."
-      }
+      "statementFormatHint": "The CSV export imported into this account."
     },
     "categories": {
       "title": "Expense types",

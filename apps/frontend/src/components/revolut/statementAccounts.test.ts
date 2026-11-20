@@ -18,7 +18,6 @@ const account = (
   kind: PaymentAccountKindDTO.OTHER,
   name: id,
   bexioAccountNo: null,
-  bexioBankAccountId: null,
   bookingMode: BookingModeDTO.MANUAL_ENTRY,
   reconciliation,
   statementFormat:

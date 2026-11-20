@@ -74,12 +74,6 @@ describe("paymentSourceKey", () => {
       }),
     ).toBe("MANUAL");
     expect(
-      paymentSourceKey({
-        paymentAccountId: "a1",
-        paymentAccountSource: "BANK_ACCOUNT",
-      }),
-    ).toBe("BANK_ACCOUNT");
-    expect(
       paymentSourceKey({ paymentAccountId: "a1", paymentAccountSource: null }),
     ).toBe("ACCOUNT_NO");
   });

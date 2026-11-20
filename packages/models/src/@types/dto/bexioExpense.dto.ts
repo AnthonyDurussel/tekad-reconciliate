@@ -30,17 +30,18 @@ export interface BexioExpenseDTO {
   currency: string;
   bookingAccountNo: string | null;
   bookingAccountName: string | null;
-  /** Compte bancaire bexio payeur (id bexio) et son n° du plan comptable. */
+  /** Compte bancaire bexio payeur (id bexio) et son compte du plan comptable. */
   bankAccountId: number | null;
   bankAccountNo: string | null;
+  bankAccountName: string | null;
   paymentAccountId: string | null;
   paymentAccountName: string | null;
   /**
    * Comment le compte de paiement a été retrouvé : choisi sur la dépense
-   * (`MANUAL`), par le compte bancaire bexio associé au compte de paiement
-   * (`BANK_ACCOUNT`), par le n° du plan comptable (`ACCOUNT_NO`).
+   * (`MANUAL`), ou par le compte du plan comptable bexio associé au compte
+   * de paiement (`ACCOUNT_NO`, son `bexioAccountNo`).
    */
-  paymentAccountSource: "MANUAL" | "BANK_ACCOUNT" | "ACCOUNT_NO" | null;
+  paymentAccountSource: "MANUAL" | "ACCOUNT_NO" | null;
   /** Rapprochement exigé par le compte payeur (`null` : compte inconnu). */
   reconciliation: ReconciliationModeDTO | null;
   /** Fichiers joints dans bexio. */
@@ -87,11 +88,12 @@ export interface BexioExpenseDetailDTO extends BexioExpenseDTO {
 
 /**
  * `PUT bexio-expenses/{id}/payment-account` : le compte de paiement de la
- * dépense (`null` : de nouveau déduit). `applyToBankAccount` associe le
- * compte bancaire bexio de la dépense à ce compte de paiement : toutes ses
- * dépenses le suivent.
+ * dépense (`null` : de nouveau déduit). `applyToAccount` associe ce compte
+ * de paiement au compte du plan comptable bexio de la dépense (son
+ * `bexioAccountNo` devient `bankAccountNo`) : toutes les dépenses payées
+ * depuis ce compte le suivent.
  */
 export interface SetBexioExpenseAccountDTO {
   paymentAccountId: string | null;
-  applyToBankAccount?: boolean;
+  applyToAccount?: boolean;
 }

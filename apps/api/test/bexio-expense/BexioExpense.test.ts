@@ -89,8 +89,10 @@ function setup(list: BexioExpense[]) {
       { id: 2, accountNo: "1021", name: "Revolut", type: BexioAccountTypeDTO.ASSET, taxId: null, active: true },
       { id: 1, accountNo: "1020", name: "UBS", type: BexioAccountTypeDTO.ASSET, taxId: null, active: true },
       { id: 10, accountNo: "6510", name: "Télécom", type: BexioAccountTypeDTO.EXPENSE, taxId: null, active: true },
+      { id: 4, accountNo: "1025", name: "PostFinance", type: BexioAccountTypeDTO.ASSET, taxId: null, active: true },
     ],
     listBankAccounts: async () => [
+      { id: 7, name: "PostFinance", accountId: 4, iban: null },
       { id: 5, name: "Revolut", accountId: 2, iban: null },
       { id: 6, name: "UBS", accountId: 1, iban: null },
     ],
@@ -197,26 +199,28 @@ describe("BexioExpenseUseCases — fiche et compte", () => {
     await expect(s.useCases.file(ID, "uuid-autre")).rejects.toThrow(/not found/);
   });
 
-  it("compte inconnu → choisi sur la dépense, puis pour tout le compte bancaire bexio", async () => {
+  it("compte inconnu → choisi sur la dépense, puis associé au compte du plan comptable", async () => {
     const s = setup([
-      bexioExpense({ bankAccountId: 9, attachmentIds: [] }),
-      bexioExpense({ id: "22222222-2222-4222-8222-222222222222", documentNo: "AU-2", bankAccountId: 9 }),
+      bexioExpense({ bankAccountId: 7, attachmentIds: [] }),
+      bexioExpense({ id: "22222222-2222-4222-8222-222222222222", documentNo: "AU-2", bankAccountId: 7 }),
     ]);
     await s.useCases.sync();
-    let [one] = await s.useCases.list({ search: undefined });
+    let [one] = await s.useCases.list({});
+    expect(one).toMatchObject({ bankAccountNo: "1025", bankAccountName: "PostFinance", paymentAccountId: null });
     expect(one.issues).toContain("UNKNOWN_ACCOUNT");
     const manual = await s.useCases.setPaymentAccount(ID, "acc-cc");
     expect(manual).toMatchObject({ paymentAccountId: "acc-cc", paymentAccountSource: "MANUAL", reconciled: null });
-    // Pour toutes les dépenses de ce compte bancaire : associé au compte UBS.
-    const all = await s.useCases.setPaymentAccount(ID, "acc-ubs", true);
-    expect(all).toMatchObject({ paymentAccountId: "acc-ubs", paymentAccountSource: "BANK_ACCOUNT" });
-    expect(s.accountRows.get("acc-ubs")!.bexioBankAccountId).toBe(9);
-    const list = await s.useCases.list({});
-    expect(list.every((d) => d.paymentAccountId === "acc-ubs")).toBe(true);
-    // Le choix survit à la synchronisation.
-    await s.useCases.setPaymentAccount(ID, "acc-cc");
+    // Associé au compte du plan comptable 1025 : toutes ses dépenses suivent.
+    const all = await s.useCases.setPaymentAccount(ID, "acc-cc", true);
+    expect(all).toMatchObject({ paymentAccountId: "acc-cc", paymentAccountSource: "ACCOUNT_NO" });
+    expect(s.accountRows.get("acc-cc")!.bexioAccountNo).toBe("1025");
+    expect((await s.useCases.list({})).every((d) => d.paymentAccountId === "acc-cc")).toBe(true);
+    // Un compte du plan comptable déjà pris par un autre compte : refusé.
+    await expect(s.useCases.setPaymentAccount(ID, "acc-ubs", true)).rejects.toThrow(/déjà associé à « Compte courant Anthony »/);
+    // Le choix posé sur une dépense survit à la synchronisation.
+    await s.useCases.setPaymentAccount(ID, "acc-ubs");
     await s.useCases.sync();
     [one] = (await s.useCases.list({})).filter((d) => d.id === ID);
-    expect(one.paymentAccountId).toBe("acc-cc");
+    expect(one.paymentAccountId).toBe("acc-ubs");
   });
 });

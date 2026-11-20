@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActionIcon,
-  Anchor,
   Badge,
   Button,
   Card,
@@ -65,7 +64,6 @@ export default function PaymentAccountsPage() {
   const { t } = useTranslation();
   const { data: accounts = [] } = useGetPaymentAccountsQuery();
   const [remove] = useDeletePaymentAccountMutation();
-  const [update] = useUpdatePaymentAccountMutation();
   const [editing, setEditing] = useState<PaymentAccountDTO | null | undefined>(
     undefined,
   );
@@ -83,36 +81,6 @@ export default function PaymentAccountsPage() {
       onConfirm: async () => {
         try {
           await remove(account.id).unwrap();
-        } catch (error) {
-          notifications.show({ color: "red", message: getErrorMessage(error) });
-        }
-      },
-    });
-
-  /** Le compte bancaire bexio n'est plus associé : ses dépenses se redéduisent. */
-  const confirmDissociate = (account: PaymentAccountDTO) =>
-    modals.openConfirmModal({
-      title: t("admin.accounts.bexioBank.dissociateTitle"),
-      children: (
-        <Text size="sm">
-          {t("admin.accounts.bexioBank.dissociateConfirm", {
-            id: account.bexioBankAccountId,
-            name: account.name,
-          })}
-        </Text>
-      ),
-      labels: {
-        confirm: t("admin.accounts.bexioBank.dissociate"),
-        cancel: t("common.cancel"),
-      },
-      confirmProps: { color: "red" },
-      onConfirm: async () => {
-        try {
-          await update({
-            id: account.id,
-            body: { bexioBankAccountId: null },
-          }).unwrap();
-          notifications.show({ color: "teal", message: t("common.saved") });
         } catch (error) {
           notifications.show({ color: "red", message: getErrorMessage(error) });
         }
@@ -167,23 +135,6 @@ export default function PaymentAccountsPage() {
                     <Text size="sm" ff="monospace">
                       {a.bexioAccountNo ?? "—"}
                     </Text>
-                    {!!a.bexioBankAccountId && (
-                      <Group gap={6} wrap="nowrap">
-                        <Text size="xs" c="dimmed">
-                          {t("admin.accounts.bexioBank.associated", {
-                            id: a.bexioBankAccountId,
-                          })}
-                        </Text>
-                        <Anchor
-                          component="button"
-                          size="xs"
-                          c="red"
-                          onClick={() => confirmDissociate(a)}
-                        >
-                          {t("admin.accounts.bexioBank.dissociate")}
-                        </Anchor>
-                      </Group>
-                    )}
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">

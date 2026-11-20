@@ -78,5 +78,5 @@ export const linkBexioExpenseSchema: ObjectSchema<LinkBexioExpenseDTO> =
 export const setBexioExpenseAccountSchema: ObjectSchema<SetBexioExpenseAccountDTO> =
   strictObject({
     paymentAccountId: string().trim().uuid().nullable().defined(),
-    applyToBankAccount: boolean().optional(),
+    applyToAccount: boolean().optional(),
   });

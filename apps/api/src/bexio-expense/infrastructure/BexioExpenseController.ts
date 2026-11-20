@@ -71,7 +71,7 @@ export class BexioExpenseController {
       await this.useCases.setPaymentAccount(
         pathId(request),
         body.paymentAccountId,
-        body.applyToBankAccount ?? false,
+        body.applyToAccount ?? false,
       ),
     );
   }

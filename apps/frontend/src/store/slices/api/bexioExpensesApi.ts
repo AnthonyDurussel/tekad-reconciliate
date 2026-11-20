@@ -44,8 +44,9 @@ export const bexioExpensesApi = baseApi.injectEndpoints({
     }),
     /**
      * Le compte payeur de la dépense (`null` : de nouveau déduit) ;
-     * `applyToBankAccount` associe son compte bancaire bexio au compte de
-     * paiement, que toutes ses dépenses suivent.
+     * `applyToAccount` associe le compte de paiement au compte du plan
+     * comptable bexio de la dépense : toutes les dépenses payées depuis ce
+     * compte le suivent.
      */
     setBexioExpensePaymentAccount: build.mutation<
       BexioExpenseDTO,

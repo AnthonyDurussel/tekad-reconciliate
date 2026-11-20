@@ -25,7 +25,6 @@ type AccountRow = {
   kind: string;
   name: string;
   bexio_account_no: string | null;
-  bexio_bank_account_id: number | null;
   reconciliation: string;
   statement_format: string | null;
   booking_mode: string;
@@ -47,7 +46,6 @@ export const toPaymentAccount = (row: AccountRow): PaymentAccountProps => ({
   kind: row.kind as PaymentAccountKindDTO,
   name: row.name,
   bexioAccountNo: row.bexio_account_no,
-  bexioBankAccountId: row.bexio_bank_account_id,
   reconciliation: row.reconciliation as ReconciliationModeDTO,
   statementFormat: row.statement_format as StatementFormatDTO | null,
   bookingMode: row.booking_mode as BookingModeDTO,
@@ -126,7 +124,6 @@ export class PrismaSettingsRepository implements ISettingsRepository {
       kind: account.kind,
       name: account.name,
       bexio_account_no: account.bexioAccountNo,
-      bexio_bank_account_id: account.bexioBankAccountId,
       reconciliation: account.reconciliation,
       statement_format: account.statementFormat,
       booking_mode: account.bookingMode,
@@ -164,7 +161,7 @@ export class PrismaSettingsRepository implements ISettingsRepository {
     } catch (error) {
       if (uniqueViolation(error)) {
         throw new ConflictError(
-          "ce nom, cette carte, ce compte de relevé ou ce compte bancaire bexio est déjà utilisé",
+          "ce nom, cette carte ou ce compte de relevé est déjà utilisé",
         );
       }
       throw error;

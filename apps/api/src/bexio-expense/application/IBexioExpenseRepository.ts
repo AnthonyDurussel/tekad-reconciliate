@@ -4,8 +4,9 @@ import type { BexioExpense } from "@/bexio/application/ports/IBexioGateway.js";
 export interface StoredBexioExpense extends BexioExpense {
   bookingAccountNo: string | null;
   bookingAccountName: string | null;
-  /** N° du plan comptable du compte bancaire payeur. */
+  /** Compte du plan comptable du compte bancaire payeur (n° et nom). */
   bankAccountNo: string | null;
+  bankAccountName: string | null;
   /** Compte de paiement choisi sur la dépense (gardé à la synchronisation). */
   paymentAccountId: string | null;
   syncedAt: Date;

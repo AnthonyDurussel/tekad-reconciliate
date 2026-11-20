@@ -27,6 +27,7 @@ const bexio = (patch: Partial<BexioExpenseDTO>): BexioExpenseDTO => ({
   bookingAccountName: "Frais de bureau",
   bankAccountId: null,
   bankAccountNo: null,
+  bankAccountName: null,
   paymentAccountId: "acc",
   paymentAccountName: "UBS",
   paymentAccountSource: null,

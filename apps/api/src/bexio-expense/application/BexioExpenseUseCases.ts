@@ -60,10 +60,10 @@ export class BexioExpenseUseCases {
       this.bexio.listBankAccounts(),
     ]);
     const accountById = new Map(chart.map((a) => [a.id, a]));
-    const bankAccountNo = new Map(
+    const bankChart = new Map(
       banks.map((b) => [
         b.id,
-        b.accountId ? (accountById.get(b.accountId)?.accountNo ?? null) : null,
+        b.accountId ? accountById.get(b.accountId) : undefined,
       ]),
     );
     await this.repository.replaceAll(
@@ -76,7 +76,10 @@ export class BexioExpenseUseCases {
           ? (accountById.get(e.bookingAccountId)?.name ?? null)
           : null,
         bankAccountNo: e.bankAccountId
-          ? (bankAccountNo.get(e.bankAccountId) ?? null)
+          ? (bankChart.get(e.bankAccountId)?.accountNo ?? null)
+          : null,
+        bankAccountName: e.bankAccountId
+          ? (bankChart.get(e.bankAccountId)?.name ?? null)
           : null,
       })),
     );
@@ -146,24 +149,17 @@ export class BexioExpenseUseCases {
   private async toDTOs(rows: StoredBexioExpense[]): Promise<BexioExpenseDTO[]> {
     const accounts = await this.settings.listPaymentAccounts();
     const byId = new Map(accounts.map((a) => [a.id, a]));
-    const byBank = new Map(
-      accounts
-        .filter((a) => a.bexioBankAccountId)
-        .map((a) => [a.bexioBankAccountId!, a]),
-    );
     const byAccountNo = new Map(
       accounts
         .filter((a) => a.bexioAccountNo)
         .map((a) => [a.bexioAccountNo!, a]),
     );
-    /** Choisi sur la dépense › compte bancaire associé › n° du plan comptable. */
+    /** Choisi sur la dépense › compte du plan comptable associé au compte de paiement. */
     const resolve = (r: StoredBexioExpense) => {
       const manual = r.paymentAccountId
         ? byId.get(r.paymentAccountId)
         : undefined;
       if (manual) return { account: manual, source: "MANUAL" as const };
-      const bank = r.bankAccountId ? byBank.get(r.bankAccountId) : undefined;
-      if (bank) return { account: bank, source: "BANK_ACCOUNT" as const };
       const no = r.bankAccountNo ? byAccountNo.get(r.bankAccountNo) : undefined;
       if (no) return { account: no, source: "ACCOUNT_NO" as const };
       return { account: undefined, source: null };
@@ -198,6 +194,7 @@ export class BexioExpenseUseCases {
         bookingAccountName: r.bookingAccountName,
         bankAccountId: r.bankAccountId,
         bankAccountNo: r.bankAccountNo,
+        bankAccountName: r.bankAccountName,
         paymentAccountId: account?.id ?? null,
         paymentAccountName: account?.name ?? null,
         paymentAccountSource: source,
@@ -268,14 +265,15 @@ export class BexioExpenseUseCases {
 
   /**
    * Le compte de paiement de la dépense (`null` : de nouveau déduit). Avec
-   * `applyToBankAccount`, le compte bancaire bexio de la dépense est associé
-   * à ce compte de paiement : toutes ses dépenses le suivent (le choix posé
-   * sur cette dépense-ci est alors retiré, il n'est plus utile).
+   * `applyToAccount`, le compte de paiement est associé au compte du plan
+   * comptable bexio de la dépense (le compte de son compte bancaire payeur) :
+   * son `bexioAccountNo` le devient, et toutes les dépenses payées depuis ce
+   * compte le suivent (le choix posé sur cette dépense est retiré).
    */
   async setPaymentAccount(
     id: string,
     paymentAccountId: string | null,
-    applyToBankAccount = false,
+    applyToAccount = false,
   ): Promise<BexioExpenseDTO> {
     const row = await this.repository.find(id);
     if (!row) throw new NotFoundError("Bexio expense");
@@ -285,30 +283,26 @@ export class BexioExpenseUseCases {
     }
     const account = await this.settings.findPaymentAccount(paymentAccountId);
     if (!account) throw new NotFoundError("Payment account");
-    if (!applyToBankAccount) {
+    if (!applyToAccount) {
       await this.repository.setPaymentAccount(id, paymentAccountId);
       return this.one(id);
     }
-    if (!row.bankAccountId) {
+    if (!row.bankAccountNo) {
       throw new ValidationError(
-        "cette dépense bexio n'indique pas de compte bancaire",
+        "le compte bancaire de cette dépense n'a pas de compte du plan comptable bexio",
       );
     }
-    // Le compte bancaire bexio ne va qu'à un compte de paiement.
-    for (const other of await this.settings.listPaymentAccounts()) {
-      if (
-        other.id !== account.id &&
-        other.bexioBankAccountId === row.bankAccountId
-      ) {
-        const { expenseCount: _count, ...plain } = other;
-        await this.settings.savePaymentAccount(
-          { ...plain, bexioBankAccountId: null },
-          false,
-        );
-      }
+    // Un compte du plan comptable va à un seul compte de paiement.
+    const other = (await this.settings.listPaymentAccounts()).find(
+      (a) => a.id !== account.id && a.bexioAccountNo === row.bankAccountNo,
+    );
+    if (other) {
+      throw new ConflictError(
+        `le compte ${row.bankAccountNo} est déjà associé à « ${other.name} » : changez-le d'abord dans Comptes et cartes`,
+      );
     }
     await this.settings.savePaymentAccount(
-      { ...account, bexioBankAccountId: row.bankAccountId },
+      { ...account, bexioAccountNo: row.bankAccountNo },
       false,
     );
     await this.repository.setPaymentAccount(id, null);

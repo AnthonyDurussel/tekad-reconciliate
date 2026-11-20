@@ -291,16 +291,19 @@ function PaymentAccountCard({
   const [selected, setSelected] = useState<string | null>(
     detail.paymentAccountId,
   );
-  const [applyToBank, setApplyToBank] = useState(false);
+  const [applyToAccount, setApplyToAccount] = useState(true);
   const source = paymentSourceKey(detail);
-  const hasBank = detail.bankAccountId !== null;
-  const bankOwner = hasBank
-    ? accounts.find((a) => a.bexioBankAccountId === detail.bankAccountId)
+  // Le compte du plan comptable bexio du compte bancaire payeur.
+  const hasChart = !!detail.bankAccountNo;
+  const chartOwner = hasChart
+    ? accounts.find((a) => a.bexioAccountNo === detail.bankAccountNo)
     : undefined;
   const options = accounts
     .filter((a) => a.active || a.id === detail.paymentAccountId)
     .map((a) => ({ value: a.id, label: a.name }));
-  const unchanged = selected === detail.paymentAccountId && !applyToBank;
+  const unchanged =
+    selected === detail.paymentAccountId &&
+    (!applyToAccount || source === "ACCOUNT_NO");
 
   const submit = async (paymentAccountId: string | null) => {
     try {
@@ -308,8 +311,8 @@ function PaymentAccountCard({
         id: detail.id,
         body: {
           paymentAccountId,
-          ...(paymentAccountId && applyToBank && hasBank
-            ? { applyToBankAccount: true }
+          ...(paymentAccountId && applyToAccount && hasChart
+            ? { applyToAccount: true }
             : {}),
         },
       }).unwrap();
@@ -324,25 +327,21 @@ function PaymentAccountCard({
       <CardTitle>{t("bexioExpenseDetail.account.title")}</CardTitle>
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" verticalSpacing="sm">
         <Field label={t("bexioExpenseDetail.account.bank")}>
-          {hasBank ? (
+          {hasChart ? (
             <>
-              {detail.bankAccountNo && (
-                <Text span size="sm" ff="monospace">
-                  {detail.bankAccountNo}
-                </Text>
-              )}{" "}
-              <Text span size="xs" c="dimmed">
-                {t("bexioExpenseDetail.account.bankId", {
-                  id: detail.bankAccountId,
-                })}
+              <Text span size="sm" ff="monospace" fw={600}>
+                {detail.bankAccountNo}
+              </Text>{" "}
+              <Text span size="sm">
+                {detail.bankAccountName}
               </Text>
-              {bankOwner && (
-                <Text size="xs" c="dimmed">
-                  {t("bexioExpenseDetail.account.bankOwner", {
-                    name: bankOwner.name,
-                  })}
-                </Text>
-              )}
+              <Text size="xs" c="dimmed">
+                {chartOwner
+                  ? t("bexioExpenseDetail.account.chartOwner", {
+                      name: chartOwner.name,
+                    })
+                  : t("bexioExpenseDetail.account.chartFree")}
+              </Text>
             </>
           ) : (
             <Text size="sm" c="dimmed">
@@ -387,17 +386,19 @@ function PaymentAccountCard({
             maw={360}
           />
           <Checkbox
-            label={t("bexioExpenseDetail.account.applyToBank")}
+            label={t("bexioExpenseDetail.account.applyToAccount", {
+              no: detail.bankAccountNo ?? "",
+            })}
             description={
-              hasBank
-                ? t("bexioExpenseDetail.account.applyToBankHint", {
-                    id: detail.bankAccountId,
+              hasChart
+                ? t("bexioExpenseDetail.account.applyToAccountHint", {
+                    no: detail.bankAccountNo,
                   })
-                : t("bexioExpenseDetail.account.applyToBankDisabled")
+                : t("bexioExpenseDetail.account.applyToAccountDisabled")
             }
-            checked={applyToBank && hasBank}
-            disabled={!hasBank}
-            onChange={(e) => setApplyToBank(e.currentTarget.checked)}
+            checked={applyToAccount && hasChart}
+            disabled={!hasChart}
+            onChange={(e) => setApplyToAccount(e.currentTarget.checked)}
           />
           <Group gap="sm">
             <Button

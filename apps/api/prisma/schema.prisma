@@ -45,8 +45,6 @@ model PaymentAccountDB {
   name                  String   @unique
   /// Compte bexio crédité (1021, 1020, 2210…).
   bexio_account_no      String?
-  /// Compte bancaire bexio associé (dépenses bexio payées depuis lui).
-  bexio_bank_account_id Int?     @unique
   /// `ReconciliationModeDTO` : BEXIO | STATEMENT_IMPORT | NONE
   reconciliation        String   @default("NONE")
   /// `StatementFormatDTO` (import seulement)
@@ -218,6 +216,7 @@ model BexioExpenseDB {
   bank_account_id      Int?
   /// N° du compte du plan comptable du compte bancaire payeur.
   bank_account_no      String?
+  bank_account_name    String?
   /// Compte de paiement choisi sur la dépense (gardé à la synchronisation).
   payment_account_id   String?
   /// Rapprochée dans bexio : la transaction bancaire.

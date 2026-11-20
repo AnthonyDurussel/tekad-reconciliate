@@ -87,9 +87,10 @@ receipt currency, ±0.01), date ≤ 5 days, card, merchant similarity; auto-matc
 
 Dépenses bexio (`bexio-expense`): `POST sync/bexio-expenses` (also last step of `sync/all`) reads every
 bexio expense, resolves its booking account (chart) and its paying bank account (`3.0/banking/accounts`), stores
-them (the paying payment account: chosen on the expense `bexio_expenses.payment_account_id`, kept by
-syncs › the payment account associated with the bexio bank account `bexio_bank_account_id` › the
-payment account whose `bexioAccountNo` is the bank's chart account; `paymentAccountSource`), and links each pièce whose
+them with the bank's **chart account** (`bank_account_no` / `bank_account_name`). The paying payment
+account: chosen on the expense (`bexio_expenses.payment_account_id`, kept by syncs, source `MANUAL`)
+› the payment account **associated with that chart account** — its `bexioAccountNo` (source
+`ACCOUNT_NO`); one chart account ↔ one payment account. and links each pièce whose
 file UUID (`expenses.bexio_file_uuid`) is among the expense's `attachment_ids` (`Expense.linkBexioExpense`
 → BOOKED); a pièce linked to an expense gone from bexio is unlinked. `checkBexioExpense()` flags
 `MISSING_RECEIPT` (no attachment, no linked pièce), `NOT_RECONCILED` (account `BEXIO`: no bexio
@@ -144,7 +145,7 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `GET bexio-expenses?from&to&paymentAccountId&issue&search`                                  | `EXPENSE_VIEW`                     | `BexioExpenseDTO[]` (`issue` = a `BexioExpenseIssueDTO` or `ok`)  |
 | `GET bexio-expenses/{id}`                                                                    | `EXPENSE_VIEW`                     | `BexioExpenseDetailDTO` (+ `attachments`: uuid, name, mime — `3.0/files/search` by uuid) |
 | `GET bexio-expenses/{id}/files/{uuid}`                                                       | `EXPENSE_VIEW`                     | the attached file (only one of this expense, or its linked pièce's) |
-| `PUT bexio-expenses/{id}/payment-account`                                                    | `EXPENSE_MANAGE`                   | `SetBexioExpenseAccountDTO` (`applyToBankAccount` → `payment_accounts.bexio_bank_account_id`) |
+| `PUT bexio-expenses/{id}/payment-account`                                                    | `EXPENSE_MANAGE`                   | `SetBexioExpenseAccountDTO` (`applyToAccount` → the payment account's `bexioAccountNo` = the expense's chart account; 409 if another account has it) |
 | `POST bexio-expenses/{id}/link`, `/unlink`                                                   | `EXPENSE_MANAGE`                   | `LinkBexioExpenseDTO` → `BexioExpenseDTO`                         |
 | `GET dashboard?from&to`                                                                      | `EXPENSE_VIEW`                     | `DashboardDTO`                                                    |
 | `GET sync/status`, `GET sync/runs`                                                           | `EXPENSE_VIEW`                     | `SyncStatusDTO` / `SyncRunDTO[]` (50 last)                        |

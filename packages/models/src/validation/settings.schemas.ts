@@ -41,7 +41,6 @@ const accountShape = {
   kind: mixed<PaymentAccountKindDTO>().oneOf(Object.values(PaymentAccountKindDTO)),
   name: requiredLabel(),
   bexioAccountNo: accountNo().nullable().optional(),
-  bexioBankAccountId: number().integer().min(1).nullable().optional(),
   reconciliation: mixed<ReconciliationModeDTO>()
     .oneOf(Object.values(ReconciliationModeDTO))
     .optional(),
