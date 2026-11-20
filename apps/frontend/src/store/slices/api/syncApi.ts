@@ -8,9 +8,10 @@ const AFFECTED = [
   "Candidates",
   "RevolutTransaction",
   "Dashboard",
+  "BexioExpense",
 ] as const;
 
-export type SyncTarget = "bexio-inbox" | "extract" | "match";
+export type SyncTarget = "bexio-inbox" | "extract" | "match" | "bexio-expenses";
 
 export const syncApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

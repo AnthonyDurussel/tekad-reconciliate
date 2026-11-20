@@ -22,6 +22,12 @@ export const protectedRoutes: Route[] = [
     permissions: [PermissionDTO.EXPENSE_VIEW],
   },
   {
+    key: "bexioExpenses",
+    path: "/bexio-expenses",
+    component: lazy(() => import("@/pages/bexio-expenses/BexioExpensesPage")),
+    permissions: [PermissionDTO.EXPENSE_VIEW],
+  },
+  {
     key: "revolut",
     path: "/revolut",
     component: lazy(() => import("@/pages/revolut/RevolutPage")),

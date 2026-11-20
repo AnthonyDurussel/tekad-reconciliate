@@ -21,6 +21,7 @@ export const API_TAG_TYPES = [
   "Sync",
   "AiSettings",
   "Bexio",
+  "BexioExpense",
 ] as const;
 
 export type ApiTagType = (typeof API_TAG_TYPES)[number];

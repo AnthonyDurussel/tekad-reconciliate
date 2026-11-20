@@ -65,6 +65,7 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "expenses": "Pièces",
+    "bexioExpenses": "Dépenses bexio",
     "revolut": "Relevés",
     "admin": {
       "main": "Administration",
@@ -107,7 +108,10 @@
     "periodTotal": "Du {{from}} au {{to}} · {{total}}",
     "total": "total",
     "receipts_one": "{{count}} pièce",
-    "receipts_other": "{{count}} pièces"
+    "receipts_other": "{{count}} pièces",
+    "bexioTodo": "Dépenses bexio à traiter",
+    "bexioTodoHint_one": "sur {{count}} dépense bexio (pièce, rapprochement)",
+    "bexioTodoHint_other": "sur {{count}} dépenses bexio (pièce, rapprochement)"
   },
   "sync": {
     "title": "Synchronisation",
@@ -130,7 +134,8 @@
     "run": {
       "bexio-inbox": "Importer l'inbox bexio",
       "extract": "Lire les pièces",
-      "match": "Rapprocher"
+      "match": "Rapprocher",
+      "bexio-expenses": "Synchroniser les dépenses"
     },
     "revolutLatest": "Relevés importés jusqu'au {{date}}",
     "revolutNone": "Aucun relevé importé"
@@ -245,7 +250,9 @@
     "ignoredDone": "Pièce ignorée.",
     "ignoredHint": "Pièce ignorée : elle n'entre ni dans les totaux ni dans la comptabilité.",
     "restore": "Restaurer",
-    "restoredDone": "Pièce restaurée."
+    "restoredDone": "Pièce restaurée.",
+    "bexioExpense": "Dépense bexio liée",
+    "bexioExpenseHint": "Dépense bexio {{id}} : la pièce y est jointe."
   },
   "revolut": {
     "title": "Relevés",
@@ -295,6 +302,84 @@
       "charge": "Frais"
     },
     "allAccounts": "Tous les comptes"
+  },
+  "bexioExpenses": {
+    "title": "Dépenses bexio",
+    "subtitle": "Chaque dépense saisie dans bexio doit avoir sa pièce et, si son compte l’exige, être rapprochée.",
+    "sync": "Synchroniser avec bexio",
+    "lastSync": "Synchronisé le {{date}}",
+    "neverSynced": "Jamais synchronisé",
+    "notConfigured": "bexio n’est pas configuré (BEXIO_API_TOKEN) : la synchronisation est impossible.",
+    "emptyTitle": "Aucune synchronisation des dépenses bexio",
+    "emptyText": "Lancez une première synchronisation pour lire les dépenses saisies dans bexio et vérifier leurs pièces et leur rapprochement.",
+    "empty": "Aucune dépense bexio pour ces filtres.",
+    "search": "Fournisseur, titre, n°…",
+    "unknownAccount": "Compte inconnu",
+    "paidOn": "Payée le",
+    "documentNo": "N°",
+    "vendor": "Fournisseur / titre",
+    "bookingAccount": "Compte de charge",
+    "paymentAccount": "Compte payeur",
+    "receipt": "Pièce",
+    "reconciliation": "Rapprochement",
+    "issues": "À faire",
+    "draft": "Brouillon",
+    "ok": "OK",
+    "openReceipt": "Ouvrir la pièce",
+    "attached_one": "{{count}} jointe dans bexio",
+    "attached_other": "{{count}} jointes dans bexio",
+    "missing": "Manquante",
+    "notRequired": "Non requis",
+    "reconciled": "Rapprochée",
+    "reconciledInBexio": "dans bexio",
+    "reconciledStatement": "par le relevé importé",
+    "toReconcile": "À rapprocher",
+    "reconcile": "Rapprocher",
+    "linkFirst": "liez d’abord une pièce",
+    "reconcileInBexio": "à rapprocher dans bexio",
+    "reconciliationMode": {
+      "BEXIO": "Dans bexio",
+      "STATEMENT_IMPORT": "Import",
+      "NONE": "Sans relevé"
+    },
+    "tiles": {
+      "all": "Dépenses",
+      "missingReceipt": "Sans pièce",
+      "notReconciled": "À rapprocher",
+      "ok": "En ordre"
+    },
+    "filter": {
+      "all": "Toutes",
+      "todo": "À traiter",
+      "MISSING_RECEIPT": "Sans pièce",
+      "NOT_RECONCILED": "À rapprocher",
+      "ok": "OK"
+    },
+    "issue": {
+      "MISSING_RECEIPT": "Sans pièce",
+      "NOT_RECONCILED": "Non rapprochée",
+      "UNKNOWN_ACCOUNT": "Compte inconnu",
+      "DRAFT": "Brouillon"
+    },
+    "link": {
+      "action": "Lier une pièce",
+      "title": "Lier une pièce à la dépense bexio",
+      "subject": "{{no}} — {{vendor}} — payée le {{date}} — {{amount}}",
+      "hint": "Pièces du {{from}} au {{to}} (±{{days}} jours), ni ignorées ni déjà liées, les plus proches du montant en tête. Le fichier sera joint à la dépense dans bexio.",
+      "search": "Rechercher une pièce",
+      "receipt": "Pièce",
+      "sameAmount": "même montant",
+      "preview": "Voir la pièce",
+      "confirm": "Lier",
+      "none": "Aucune pièce candidate.",
+      "done": "Pièce jointe dans bexio"
+    },
+    "unlink": {
+      "action": "Délier la pièce",
+      "title": "Délier la pièce ?",
+      "confirm": "La pièce « {{file}} » ne sera plus liée à la dépense {{no}} dans l’application. Le fichier reste joint à la dépense dans bexio : retirez-le là-bas au besoin.",
+      "done": "Pièce déliée"
+    }
   },
   "ignore": {
     "reason": "Raison",
@@ -478,6 +563,7 @@
       "BEXIO_INBOX": "Inbox bexio",
       "EXTRACTION": "Lecture des pièces",
       "REVOLUT": "Relevés importés",
+      "BEXIO_EXPENSES": "Dépenses bexio",
       "MATCHING": "Rapprochement"
     },
     "reconciliationMode": {

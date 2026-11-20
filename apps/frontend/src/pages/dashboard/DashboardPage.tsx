@@ -6,6 +6,7 @@ import {
   IconChecklist,
   IconCircleCheck,
   IconEdit,
+  IconFileInvoice,
   IconFileText,
   IconLayoutDashboard,
   IconReceiptOff,
@@ -25,7 +26,10 @@ import { StatTile, type TileIcon } from "@/components/dashboard/StatTile";
 import { RankedBars } from "@/components/dashboard/Bars";
 import { DonutChart } from "@/components/dashboard/charts";
 import { themeSeries, useChartTheme } from "@/components/dashboard/chartTheme";
-import { useGetDashboardQuery } from "@/store/slices/api";
+import {
+  useGetBexioExpensesQuery,
+  useGetDashboardQuery,
+} from "@/store/slices/api";
 import { formatChf, formatChfPrecise, formatDate } from "@/utils/format";
 import { lastThreeMonths, type Period } from "@/utils/period";
 import SyncPanel from "./SyncPanel";
@@ -104,6 +108,13 @@ function DashboardBody({
   const theme = useChartTheme();
   const query = (extra: Record<string, string>) =>
     new URLSearchParams({ ...period, ...extra }).toString();
+  // Dépenses bexio à traiter : la liste, comptée ici (sans bexio : 409, pas de tuile).
+  const {
+    data: bexioExpenses,
+    isLoading: bexioLoading,
+    isError: bexioError,
+  } = useGetBexioExpensesQuery(period);
+  const bexioTodo = (bexioExpenses ?? []).filter((e) => e.issues.length > 0);
 
   // Couleurs à l'entité, dans l'ordre de la liste (jamais au rang).
   const byAccount = data?.byAccount ?? [];
@@ -139,7 +150,7 @@ function DashboardBody({
 
   return (
     <Stack gap="lg">
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 5 }}>
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: bexioError ? 5 : 6 }}>
         {TILES.map(({ status, icon, accent }) => (
           <UnstyledButton
             key={status}
@@ -179,6 +190,27 @@ function DashboardBody({
             }
           />
         </UnstyledButton>
+        {!bexioError && (
+          <UnstyledButton
+            component={Link}
+            to={`/bexio-expenses?${query({ issue: "todo" })}`}
+          >
+            <StatTile
+              label={t("dashboard.bexioTodo")}
+              icon={IconFileInvoice}
+              accent="var(--mantine-color-orange-6)"
+              loading={bexioLoading}
+              value={bexioTodo.length}
+              footer={
+                <Text size="xs" c="dimmed">
+                  {t("dashboard.bexioTodoHint", {
+                    count: bexioExpenses?.length ?? 0,
+                  })}
+                </Text>
+              }
+            />
+          </UnstyledButton>
+        )}
       </SimpleGrid>
       <Grid gap="lg">
         <Grid.Col span={{ base: 12, lg: 5 }}>

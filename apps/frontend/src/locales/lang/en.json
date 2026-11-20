@@ -65,6 +65,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "expenses": "Receipts",
+    "bexioExpenses": "bexio expenses",
     "revolut": "Statements",
     "admin": {
       "main": "Administration",
@@ -107,7 +108,10 @@
     "periodTotal": "From {{from}} to {{to}} · {{total}}",
     "total": "total",
     "receipts_one": "{{count}} receipt",
-    "receipts_other": "{{count}} receipts"
+    "receipts_other": "{{count}} receipts",
+    "bexioTodo": "bexio expenses to handle",
+    "bexioTodoHint_one": "out of {{count}} bexio expense (receipt, reconciliation)",
+    "bexioTodoHint_other": "out of {{count}} bexio expenses (receipt, reconciliation)"
   },
   "sync": {
     "title": "Synchronisation",
@@ -130,7 +134,8 @@
     "run": {
       "bexio-inbox": "Import the bexio inbox",
       "extract": "Read receipts",
-      "match": "Match"
+      "match": "Match",
+      "bexio-expenses": "Sync expenses"
     },
     "revolutLatest": "Statements imported up to {{date}}",
     "revolutNone": "No statement imported"
@@ -245,7 +250,9 @@
     "ignoredDone": "Receipt ignored.",
     "ignoredHint": "Ignored receipt: it counts neither in totals nor in the books.",
     "restore": "Restore",
-    "restoredDone": "Receipt restored."
+    "restoredDone": "Receipt restored.",
+    "bexioExpense": "Linked bexio expense",
+    "bexioExpenseHint": "bexio expense {{id}}: the receipt is attached to it."
   },
   "revolut": {
     "title": "Statements",
@@ -295,6 +302,84 @@
       "charge": "Charge"
     },
     "allAccounts": "All accounts"
+  },
+  "bexioExpenses": {
+    "title": "bexio expenses",
+    "subtitle": "Every expense entered in bexio needs its receipt and, when its account requires it, to be reconciled.",
+    "sync": "Sync with bexio",
+    "lastSync": "Synced on {{date}}",
+    "neverSynced": "Never synced",
+    "notConfigured": "bexio is not configured (BEXIO_API_TOKEN): sync is not possible.",
+    "emptyTitle": "bexio expenses never synced",
+    "emptyText": "Run a first sync to read the expenses entered in bexio and check their receipts and reconciliation.",
+    "empty": "No bexio expense for these filters.",
+    "search": "Vendor, title, no.…",
+    "unknownAccount": "Unknown account",
+    "paidOn": "Paid on",
+    "documentNo": "No.",
+    "vendor": "Vendor / title",
+    "bookingAccount": "Expense account",
+    "paymentAccount": "Paying account",
+    "receipt": "Receipt",
+    "reconciliation": "Reconciliation",
+    "issues": "To do",
+    "draft": "Draft",
+    "ok": "OK",
+    "openReceipt": "Open receipt",
+    "attached_one": "{{count}} attached in bexio",
+    "attached_other": "{{count}} attached in bexio",
+    "missing": "Missing",
+    "notRequired": "Not required",
+    "reconciled": "Reconciled",
+    "reconciledInBexio": "in bexio",
+    "reconciledStatement": "by the imported statement",
+    "toReconcile": "To reconcile",
+    "reconcile": "Reconcile",
+    "linkFirst": "link a receipt first",
+    "reconcileInBexio": "to reconcile in bexio",
+    "reconciliationMode": {
+      "BEXIO": "In bexio",
+      "STATEMENT_IMPORT": "Import",
+      "NONE": "No statement"
+    },
+    "tiles": {
+      "all": "Expenses",
+      "missingReceipt": "No receipt",
+      "notReconciled": "To reconcile",
+      "ok": "In order"
+    },
+    "filter": {
+      "all": "All",
+      "todo": "To handle",
+      "MISSING_RECEIPT": "No receipt",
+      "NOT_RECONCILED": "To reconcile",
+      "ok": "OK"
+    },
+    "issue": {
+      "MISSING_RECEIPT": "No receipt",
+      "NOT_RECONCILED": "Not reconciled",
+      "UNKNOWN_ACCOUNT": "Unknown account",
+      "DRAFT": "Draft"
+    },
+    "link": {
+      "action": "Link a receipt",
+      "title": "Link a receipt to the bexio expense",
+      "subject": "{{no}} — {{vendor}} — paid on {{date}} — {{amount}}",
+      "hint": "Receipts from {{from}} to {{to}} (±{{days}} days), neither ignored nor already linked, closest amount first. The file will be attached to the expense in bexio.",
+      "search": "Search a receipt",
+      "receipt": "Receipt",
+      "sameAmount": "same amount",
+      "preview": "View receipt",
+      "confirm": "Link",
+      "none": "No candidate receipt.",
+      "done": "Receipt attached in bexio"
+    },
+    "unlink": {
+      "action": "Unlink receipt",
+      "title": "Unlink the receipt?",
+      "confirm": "The receipt “{{file}}” will no longer be linked to expense {{no}} in the app. The file stays attached to the expense in bexio: remove it there if needed.",
+      "done": "Receipt unlinked"
+    }
   },
   "ignore": {
     "reason": "Reason",
@@ -478,6 +563,7 @@
       "BEXIO_INBOX": "bexio inbox",
       "EXTRACTION": "Receipt reading",
       "REVOLUT": "Imported statements",
+      "BEXIO_EXPENSES": "bexio expenses",
       "MATCHING": "Matching"
     },
     "reconciliationMode": {

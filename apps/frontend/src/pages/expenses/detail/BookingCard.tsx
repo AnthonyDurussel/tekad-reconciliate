@@ -7,6 +7,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { IconCircleCheck, IconInfoCircle } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
@@ -40,11 +41,24 @@ export default function BookingCard({ expense }: { expense: ExpenseDTO }) {
               ? t("expenseDetail.bookingDone")
               : t("expenseDetail.bookingProposal")}
           </Text>
-          {booking.mode && (
-            <Badge variant="light" color="gray">
-              {t(`enum.bookingMode.${booking.mode}`)}
-            </Badge>
-          )}
+          <Group gap={6} wrap="nowrap">
+            {expense.bexioExpenseId && (
+              <Tooltip
+                label={t("expenseDetail.bexioExpenseHint", {
+                  id: expense.bexioExpenseId,
+                })}
+              >
+                <Badge variant="light" color="teal">
+                  {t("expenseDetail.bexioExpense")}
+                </Badge>
+              </Tooltip>
+            )}
+            {booking.mode && (
+              <Badge variant="light" color="gray">
+                {t(`enum.bookingMode.${booking.mode}`)}
+              </Badge>
+            )}
+          </Group>
         </Group>
         <SimpleGrid cols={{ base: 2, sm: 3 }}>
           <Field label={t("expenses.date")} value={formatDate(booking.date)} />

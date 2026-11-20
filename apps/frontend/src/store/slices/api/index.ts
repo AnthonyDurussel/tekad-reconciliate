@@ -7,3 +7,4 @@ export * from "./dashboardApi";
 export * from "./syncApi";
 export * from "./aiSettingsApi";
 export * from "./bexioApi";
+export * from "./bexioExpensesApi";

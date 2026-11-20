@@ -11,6 +11,7 @@ import {
 import { notifications } from "@mantine/notifications";
 import {
   IconCheck,
+  IconFileInvoice,
   IconInbox,
   IconLink,
   IconRefresh,
@@ -71,6 +72,12 @@ const SOURCES: SourceRow[] = [
     target: "match",
     icon: IconLink,
     configured: () => true,
+  },
+  {
+    source: SyncSourceDTO.BEXIO_EXPENSES,
+    target: "bexio-expenses",
+    icon: IconFileInvoice,
+    configured: (s) => s.bexioConfigured,
   },
 ];
 
