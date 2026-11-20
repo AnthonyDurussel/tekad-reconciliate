@@ -315,7 +315,7 @@
       "name": "Nom",
       "kind": "Genre",
       "bexioAccount": "Compte bexio",
-      "bexioAccountHint": "Compte crédité (1021 Revolut, 1020 UBS, 2210 compte courant Anthony…)",
+      "bexioAccountHint": "Compte crédité, du plan comptable bexio (1021 Revolut, 1020 UBS, 2210 compte courant Anthony…)",
       "bookingMode": "Comptabilisation",
       "bookingModeHint": {
         "MANUAL_ENTRY": "L'application passe l'écriture dans bexio, pièce jointe.",
@@ -324,32 +324,39 @@
       "revolutAccountId": "Compte Revolut (colonne « Account » du relevé)",
       "revolutAccountIdHint": "Ex. « CHF Main » : les lignes de ce compte dans le relevé CSV lui sont rattachées. Vide : avec un seul compte Revolut, tout le relevé y va.",
       "cards": "Cartes",
-      "cardsHint": "Les 4 derniers chiffres lus sur un ticket rattachent la pièce à ce compte.",
-      "last4": "4 derniers chiffres",
+      "cardsHint": "Tapez ou collez le numéro de la carte (entier ou masqué) : seuls sa forme masquée et ses 4 derniers chiffres sont gardés. Les 4 derniers chiffres lus sur un ticket rattachent la pièce à ce compte.",
       "cardLabel": "Libellé",
       "holder": "Titulaire",
       "addCard": "Ajouter une carte",
-      "last4Invalid": "4 chiffres",
       "last4Duplicate": "Carte en double",
       "activeHint": "Un compte inactif ne se propose plus, mais reste sur ses pièces.",
       "deleteTitle": "Supprimer le compte",
-      "deleteConfirm": "Supprimer le compte « {{name}} » et ses cartes ?"
+      "deleteConfirm": "Supprimer le compte « {{name}} » et ses cartes ?",
+      "cardNumber": "Numéro de carte",
+      "cardNumberPlaceholder": "5167 6012 3456 4721",
+      "cardNumberHint": "Entier, espacé ou masqué (5167 60** **** 4721).",
+      "cardNumberRead": "Gardé : {{masked}} · 4 derniers chiffres : {{last4}}",
+      "cardNumberSaved": "Enregistré : {{masked}} — tapez un autre numéro pour le remplacer.",
+      "cardNumberInvalid": "Le numéro doit finir par 4 chiffres.",
+      "cardNumberRequired": "Saisissez le numéro de la carte.",
+      "noCard": "Aucune carte : ajoutez celles de ce compte pour reconnaître ses tickets.",
+      "removeCard": "Retirer la carte"
     },
     "categories": {
       "title": "Types de dépense",
-      "subtitle": "Le compte de charge, la TVA et les règles qui reconnaissent chaque type.",
+      "subtitle": "Repris du plan comptable bexio (un type par compte de charge) ; la TVA et les règles qui reconnaissent chaque type.",
       "create": "Nouveau type",
       "edit": "Modifier le type",
-      "empty": "Aucun type de dépense.",
+      "empty": "Aucun type de dépense. Synchronisez avec le plan comptable bexio pour reprendre ses comptes de charge.",
       "code": "Code",
-      "codeHint": "Code stable, proposé par la lecture IA (ex. IT, REPAS, TRANSPORT).",
+      "codeHint": "Code stable, proposé par la lecture IA (le numéro du compte bexio par défaut).",
       "label": "Libellé",
       "bexioAccount": "Compte de charge",
-      "bexioAccountHint": "Compte bexio débité (ex. 6570 Informatique).",
+      "bexioAccountHint": "Compte de charge du plan comptable bexio : son numéro et son nom deviennent le code et le libellé.",
       "tax": "TVA",
       "vatRate": "Taux de TVA",
       "taxId": "Code TVA bexio",
-      "taxIdHint": "tax_id bexio ; vide : sans TVA.",
+      "taxIdHint": "Vide : sans TVA.",
       "taxIdShort": "code {{id}}",
       "rules": "Règles",
       "keywords": "Mots-clés",
@@ -362,7 +369,15 @@
       "mccCount_other": "{{count}} MCC",
       "activeHint": "Un type inactif ne se propose plus, mais reste sur ses pièces.",
       "deleteTitle": "Supprimer le type",
-      "deleteConfirm": "Supprimer le type « {{label}} » ?"
+      "deleteConfirm": "Supprimer le type « {{label}} » ?",
+      "labelHint": "Le nom du compte bexio par défaut.",
+      "vatRateHint": "Repris du code TVA choisi.",
+      "sync": "Synchroniser avec le plan comptable bexio",
+      "syncDone_one": "{{count}} compte de charge lu dans bexio",
+      "syncDone_other": "{{count}} comptes de charge lus dans bexio",
+      "syncDetail": "{{created}} type(s) créé(s), {{updated}} mis à jour, {{deactivated}} désactivé(s). Mots-clés et codes MCC conservés.",
+      "syncFailed": "Synchronisation impossible",
+      "fromBexio": "Repris du plan comptable bexio"
     },
     "users": {
       "title": "Utilisateurs",
@@ -473,7 +488,9 @@
     "errors_one": "{{count}} ligne illisible ({{first}})",
     "errors_other": "{{count}} lignes illisibles, dont : {{first}}",
     "failed": "Relevé non importé",
-    "hint": "Revolut Business → Transactions → Relevé → CSV. Réimporter un relevé met à jour sans doublon."
+    "hint": "Revolut Business → Transactions → Relevé → CSV. Réimporter un relevé met à jour sans doublon.",
+    "cardsAdded_one": "{{count}} carte ajoutée : {{cards}}",
+    "cardsAdded_other": "{{count}} cartes ajoutées : {{cards}}"
   },
   "aiSettings": {
     "title": "Intelligence artificielle",
@@ -519,5 +536,17 @@
     "testFailed": "Échec du test",
     "reset": "Revenir aux variables du serveur",
     "resetConfirm": "Les réglages enregistrés (clé comprise) seront effacés ; les variables OPENROUTER_* du serveur s'appliqueront."
+  },
+  "bexio": {
+    "notConnected": "bexio n'est pas connecté (BEXIO_API_TOKEN absent) : le plan comptable ne peut pas être lu.",
+    "notConnectedHint": "bexio non connecté : saisie libre.",
+    "loading": "Lecture du plan comptable bexio…",
+    "pickAccount": "Choisir un compte bexio",
+    "noAccount": "Aucun compte bexio",
+    "unknownAccount": "{{accountNo}} — inconnu dans bexio",
+    "noTax": "Sans TVA",
+    "noTaxFound": "Aucun code TVA",
+    "preTax": "TVA préalable (achats)",
+    "otherTax": "Autres codes"
   }
 }

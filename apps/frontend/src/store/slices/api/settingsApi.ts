@@ -1,4 +1,5 @@
 import type {
+  CategorySyncResultDTO,
   CreateExpenseCategoryDTO,
   CreatePaymentAccountDTO,
   ExpenseCategoryDTO,
@@ -69,6 +70,19 @@ export const settingsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `expense-categories/${id}`, method: "DELETE" }),
       invalidatesTags: ["ExpenseCategory"],
     }),
+    /**
+     * Reprend les types de dépense du plan comptable bexio (un par compte de
+     * charge actif) ; garde mots-clés et codes MCC.
+     */
+    syncExpenseCategoriesFromBexio: build.mutation<CategorySyncResultDTO, void>(
+      {
+        query: () => ({
+          url: "expense-categories/sync-bexio",
+          method: "POST",
+        }),
+        invalidatesTags: ["ExpenseCategory", "Bexio", ...AFFECTED],
+      },
+    ),
   }),
 });
 
@@ -81,4 +95,5 @@ export const {
   useCreateExpenseCategoryMutation,
   useUpdateExpenseCategoryMutation,
   useDeleteExpenseCategoryMutation,
+  useSyncExpenseCategoriesFromBexioMutation,
 } = settingsApi;

@@ -6,3 +6,4 @@ export * from "./revolutApi";
 export * from "./dashboardApi";
 export * from "./syncApi";
 export * from "./aiSettingsApi";
+export * from "./bexioApi";

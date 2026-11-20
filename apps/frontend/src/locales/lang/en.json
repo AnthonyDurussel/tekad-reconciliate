@@ -315,7 +315,7 @@
       "name": "Name",
       "kind": "Kind",
       "bexioAccount": "bexio account",
-      "bexioAccountHint": "Account credited (1021 Revolut, 1020 UBS, 2210 Anthony's current account…)",
+      "bexioAccountHint": "Credited account, from the bexio chart of accounts (1021 Revolut, 1020 UBS, 2210 Anthony's current account…)",
       "bookingMode": "Booking",
       "bookingModeHint": {
         "MANUAL_ENTRY": "The application posts the entry in bexio, receipt attached.",
@@ -324,32 +324,39 @@
       "revolutAccountId": "Revolut account (statement « Account » column)",
       "revolutAccountIdHint": "E.g. « CHF Main »: statement rows of this account belong here. Empty: with a single Revolut account, the whole statement goes to it.",
       "cards": "Cards",
-      "cardsHint": "The last 4 digits read on a receipt assign it to this account.",
-      "last4": "Last 4 digits",
+      "cardsHint": "Type or paste the card number (full or masked): only its masked form and last 4 digits are kept. The last 4 digits read on a receipt link it to this account.",
       "cardLabel": "Label",
       "holder": "Holder",
       "addCard": "Add a card",
-      "last4Invalid": "4 digits",
       "last4Duplicate": "Duplicate card",
       "activeHint": "An inactive account is no longer offered, but stays on its receipts.",
       "deleteTitle": "Delete account",
-      "deleteConfirm": "Delete the account \"{{name}}\" and its cards?"
+      "deleteConfirm": "Delete the account \"{{name}}\" and its cards?",
+      "cardNumber": "Card number",
+      "cardNumberPlaceholder": "5167 6012 3456 4721",
+      "cardNumberHint": "Full, spaced or masked (5167 60** **** 4721).",
+      "cardNumberRead": "Kept: {{masked}} · last 4 digits: {{last4}}",
+      "cardNumberSaved": "Saved: {{masked}} — type another number to replace it.",
+      "cardNumberInvalid": "The number must end with 4 digits.",
+      "cardNumberRequired": "Enter the card number.",
+      "noCard": "No card: add this account's cards to recognise its receipts.",
+      "removeCard": "Remove the card"
     },
     "categories": {
       "title": "Expense types",
-      "subtitle": "The expense account, VAT and rules that recognise each type.",
+      "subtitle": "Taken from the bexio chart of accounts (one type per expense account); VAT and the rules recognising each type.",
       "create": "New type",
       "edit": "Edit type",
-      "empty": "No expense type.",
+      "empty": "No expense type. Sync with the bexio chart of accounts to take over its expense accounts.",
       "code": "Code",
-      "codeHint": "Stable code, proposed by the AI reading (e.g. IT, MEALS, TRANSPORT).",
+      "codeHint": "Stable code, proposed by the AI reading (the bexio account number by default).",
       "label": "Label",
       "bexioAccount": "Expense account",
-      "bexioAccountHint": "bexio account debited (e.g. 6570 IT).",
+      "bexioAccountHint": "Expense account of the bexio chart of accounts: its number and name become the code and label.",
       "tax": "VAT",
       "vatRate": "VAT rate",
       "taxId": "bexio VAT code",
-      "taxIdHint": "bexio tax_id; empty: no VAT.",
+      "taxIdHint": "Empty: no VAT.",
       "taxIdShort": "code {{id}}",
       "rules": "Rules",
       "keywords": "Keywords",
@@ -362,7 +369,15 @@
       "mccCount_other": "{{count}} MCC",
       "activeHint": "An inactive type is no longer offered, but stays on its receipts.",
       "deleteTitle": "Delete type",
-      "deleteConfirm": "Delete the type \"{{label}}\"?"
+      "deleteConfirm": "Delete the type \"{{label}}\"?",
+      "labelHint": "The bexio account name by default.",
+      "vatRateHint": "Taken from the chosen VAT code.",
+      "sync": "Sync with the bexio chart of accounts",
+      "syncDone_one": "{{count}} expense account read from bexio",
+      "syncDone_other": "{{count}} expense accounts read from bexio",
+      "syncDetail": "{{created}} type(s) created, {{updated}} updated, {{deactivated}} deactivated. Keywords and MCC codes kept.",
+      "syncFailed": "Sync failed",
+      "fromBexio": "Taken from the bexio chart of accounts"
     },
     "users": {
       "title": "Users",
@@ -473,7 +488,9 @@
     "errors_one": "{{count}} unreadable line ({{first}})",
     "errors_other": "{{count}} unreadable lines, e.g. {{first}}",
     "failed": "Statement not imported",
-    "hint": "Revolut Business → Transactions → Statement → CSV. Re-importing updates without duplicates."
+    "hint": "Revolut Business → Transactions → Statement → CSV. Re-importing updates without duplicates.",
+    "cardsAdded_one": "{{count}} card added: {{cards}}",
+    "cardsAdded_other": "{{count}} cards added: {{cards}}"
   },
   "aiSettings": {
     "title": "Artificial intelligence",
@@ -519,5 +536,17 @@
     "testFailed": "Test failed",
     "reset": "Back to server variables",
     "resetConfirm": "Saved settings (key included) will be erased; the server's OPENROUTER_* variables will apply."
+  },
+  "bexio": {
+    "notConnected": "bexio is not connected (no BEXIO_API_TOKEN): the chart of accounts can't be read.",
+    "notConnectedHint": "bexio not connected: free entry.",
+    "loading": "Reading the bexio chart of accounts…",
+    "pickAccount": "Pick a bexio account",
+    "noAccount": "No bexio account",
+    "unknownAccount": "{{accountNo}} — unknown in bexio",
+    "noTax": "No VAT",
+    "noTaxFound": "No VAT code",
+    "preTax": "Input VAT (purchases)",
+    "otherTax": "Other codes"
   }
 }

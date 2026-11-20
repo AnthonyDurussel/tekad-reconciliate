@@ -22,19 +22,28 @@ import {
   IconCategory,
   IconEdit,
   IconPlus,
+  IconRefresh,
   IconTrash,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import type {
+  BexioAccountDTO,
   CreateExpenseCategoryDTO,
   ExpenseCategoryDTO,
 } from "@repo/models";
 import Page from "@/components/Page";
 import PageHeader from "@/components/PageHeader/PageHeader";
+import BexioAccountSelect from "@/components/bexio/BexioAccountSelect";
+import BexioTaxSelect from "@/components/bexio/BexioTaxSelect";
+import { EXPENSE_ACCOUNT_TYPES } from "@/components/bexio/bexioOptions";
+import { useBexioStatus } from "@/components/bexio/useBexioStatus";
 import {
   useCreateExpenseCategoryMutation,
   useDeleteExpenseCategoryMutation,
+  useGetBexioAccountsQuery,
+  useGetBexioTaxesQuery,
   useGetExpenseCategoriesQuery,
+  useSyncExpenseCategoriesFromBexioMutation,
   useUpdateExpenseCategoryMutation,
 } from "@/store/slices/api";
 import { getErrorMessage } from "@/utils/apiError";
@@ -43,14 +52,18 @@ import { getErrorMessage } from "@/utils/apiError";
 const SHOWN_KEYWORDS = 4;
 
 /**
- * Les types de dépense : le compte de charge débité, la TVA par défaut, et
- * les règles qui les reconnaissent (mots-clés du commerçant ou du ticket,
- * codes MCC des paiements par carte).
+ * Les types de dépense, repris du plan comptable bexio (un par compte de
+ * charge) : le compte débité, la TVA par défaut, et les règles qui les
+ * reconnaissent (mots-clés du commerçant ou du ticket, codes MCC des
+ * paiements par carte), propres à l'application.
  */
 export default function ExpenseCategoriesPage() {
   const { t } = useTranslation();
   const { data: categories = [] } = useGetExpenseCategoriesQuery();
   const [remove] = useDeleteExpenseCategoryMutation();
+  const [syncFromBexio, { isLoading: syncing }] =
+    useSyncExpenseCategoriesFromBexioMutation();
+  const bexio = useBexioStatus();
   const [editing, setEditing] = useState<ExpenseCategoryDTO | null | undefined>(
     undefined,
   );
@@ -74,6 +87,28 @@ export default function ExpenseCategoriesPage() {
       },
     });
 
+  const sync = async () => {
+    try {
+      const result = await syncFromBexio().unwrap();
+      notifications.show({
+        color: "teal",
+        title: t("admin.categories.syncDone", { count: result.accounts }),
+        message: t("admin.categories.syncDetail", {
+          created: result.created,
+          updated: result.updated,
+          deactivated: result.deactivated,
+        }),
+        autoClose: 8000,
+      });
+    } catch (error) {
+      notifications.show({
+        color: "red",
+        title: t("admin.categories.syncFailed"),
+        message: getErrorMessage(error),
+      });
+    }
+  };
+
   return (
     <Page maxWidth={1400}>
       <PageHeader
@@ -82,12 +117,30 @@ export default function ExpenseCategoriesPage() {
         subtitle={t("admin.categories.subtitle")}
         count={categories.length}
         actions={
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setEditing(null)}
-          >
-            {t("admin.categories.create")}
-          </Button>
+          <Group gap="xs">
+            <Button
+              variant="default"
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setEditing(null)}
+            >
+              {t("admin.categories.create")}
+            </Button>
+            <Tooltip
+              label={t("bexio.notConnected")}
+              disabled={bexio.connected !== false}
+              multiline
+              w={280}
+            >
+              <Button
+                leftSection={<IconRefresh size={16} />}
+                loading={syncing}
+                disabled={!bexio.connected}
+                onClick={sync}
+              >
+                {t("admin.categories.sync")}
+              </Button>
+            </Tooltip>
+          </Group>
         }
       />
       <Card withBorder p={0}>
@@ -112,7 +165,20 @@ export default function ExpenseCategoriesPage() {
                     {c.code}
                   </Table.Td>
                   <Table.Td>{c.label}</Table.Td>
-                  <Table.Td ff="monospace">{c.bexioAccountNo}</Table.Td>
+                  <Table.Td>
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="sm" ff="monospace">
+                        {c.bexioAccountNo}
+                      </Text>
+                      {c.bexioAccountId != null && (
+                        <Tooltip label={t("admin.categories.fromBexio")}>
+                          <Badge size="xs" variant="light" color="green">
+                            bexio
+                          </Badge>
+                        </Tooltip>
+                      )}
+                    </Group>
+                  </Table.Td>
                   <Table.Td>
                     <Text size="sm">
                       {c.vatRate != null ? `${c.vatRate} %` : "—"}
@@ -193,9 +259,21 @@ export default function ExpenseCategoriesPage() {
               {categories.length === 0 && (
                 <Table.Tr>
                   <Table.Td colSpan={8}>
-                    <Text c="dimmed" ta="center" py="lg">
-                      {t("admin.categories.empty")}
-                    </Text>
+                    <Stack align="center" gap="xs" py="lg">
+                      <Text c="dimmed" ta="center">
+                        {t("admin.categories.empty")}
+                      </Text>
+                      {bexio.connected && (
+                        <Button
+                          size="xs"
+                          leftSection={<IconRefresh size={14} />}
+                          loading={syncing}
+                          onClick={sync}
+                        >
+                          {t("admin.categories.sync")}
+                        </Button>
+                      )}
+                    </Stack>
                   </Table.Td>
                 </Table.Tr>
               )}
@@ -240,6 +318,11 @@ function CategoryForm({
   const [bexioAccountNo, setBexioAccountNo] = useState(
     category?.bexioAccountNo ?? "",
   );
+  const [bexioAccountId, setBexioAccountId] = useState<number | null>(
+    category?.bexioAccountId ?? null,
+  );
+  const { data: bexioAccounts = [] } = useGetBexioAccountsQuery();
+  const { data: bexioTaxes = [] } = useGetBexioTaxesQuery();
   const [bexioTaxId, setBexioTaxId] = useState<number | "">(
     category?.bexioTaxId ?? "",
   );
@@ -250,6 +333,29 @@ function CategoryForm({
   const [showErrors, setShowErrors] = useState(false);
 
   const accountNoInvalid = !/^\d{3,6}$/.test(bexioAccountNo.trim());
+
+  /**
+   * Choisir un compte bexio reprend son numéro comme code, son nom comme
+   * libellé et son code TVA — sauf ce que l'on a saisi soi-même.
+   */
+  const pickAccount = (accountNo: string, account: BexioAccountDTO | null) => {
+    const previous = bexioAccounts.find((a) => a.accountNo === bexioAccountNo);
+    const follows = (value: string, derived?: string | null) =>
+      !value.trim() || (derived != null && value === derived);
+    setBexioAccountNo(accountNo);
+    setBexioAccountId(account?.id ?? null);
+    if (!account) return;
+    if (follows(code, previous?.accountNo)) setCode(account.accountNo);
+    if (follows(label, previous?.name)) setLabel(account.name);
+    const taxFollows =
+      bexioTaxId === "" ||
+      (previous?.taxId != null && bexioTaxId === previous.taxId);
+    if (account.taxId != null && taxFollows) {
+      setBexioTaxId(account.taxId);
+      const tax = bexioTaxes.find((x) => x.id === account.taxId);
+      if (tax?.rate != null) setVatRate(tax.rate);
+    }
+  };
   const badMcc = mccCodes.filter((m) => !/^\d{4}$/.test(m));
   const badKeywords = keywords.filter((k) => k.trim().length < 2);
 
@@ -264,6 +370,11 @@ function CategoryForm({
     )
       return;
     const body: CreateExpenseCategoryDTO = {
+      bexioAccountId:
+        bexioAccountId ??
+        (category && bexioAccountNo.trim() === category.bexioAccountNo
+          ? category.bexioAccountId
+          : null),
       code: code.trim(),
       label: label.trim(),
       bexioAccountNo: bexioAccountNo.trim(),
@@ -289,6 +400,19 @@ function CategoryForm({
 
   return (
     <Stack>
+      <BexioAccountSelect
+        label={t("admin.categories.bexioAccount")}
+        description={t("admin.categories.bexioAccountHint")}
+        types={EXPENSE_ACCOUNT_TYPES}
+        value={bexioAccountNo}
+        clearable={false}
+        error={
+          showErrors && accountNoInvalid
+            ? t("admin.common.accountNoInvalid")
+            : null
+        }
+        onChange={pickAccount}
+      />
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <TextInput
           label={t("admin.categories.code")}
@@ -299,40 +423,30 @@ function CategoryForm({
         />
         <TextInput
           label={t("admin.categories.label")}
+          description={t("admin.categories.labelHint")}
           value={label}
           error={required(label)}
           onChange={(e) => setLabel(e.currentTarget.value)}
         />
-        <TextInput
-          label={t("admin.categories.bexioAccount")}
-          description={t("admin.categories.bexioAccountHint")}
-          value={bexioAccountNo}
-          error={
-            showErrors && accountNoInvalid
-              ? t("admin.common.accountNoInvalid")
-              : null
-          }
-          onChange={(e) => setBexioAccountNo(e.currentTarget.value)}
+        <BexioTaxSelect
+          label={t("admin.categories.taxId")}
+          description={t("admin.categories.taxIdHint")}
+          value={bexioTaxId}
+          onChange={(id, tax) => {
+            setBexioTaxId(id);
+            if (tax?.rate != null) setVatRate(tax.rate);
+          }}
         />
-        <SimpleGrid cols={2}>
-          <NumberInput
-            label={t("admin.categories.vatRate")}
-            min={0}
-            max={100}
-            decimalScale={2}
-            suffix=" %"
-            value={vatRate}
-            onChange={(v) => setVatRate(v === "" ? "" : Number(v))}
-          />
-          <NumberInput
-            label={t("admin.categories.taxId")}
-            description={t("admin.categories.taxIdHint")}
-            min={1}
-            allowDecimal={false}
-            value={bexioTaxId}
-            onChange={(v) => setBexioTaxId(v === "" ? "" : Number(v))}
-          />
-        </SimpleGrid>
+        <NumberInput
+          label={t("admin.categories.vatRate")}
+          description={t("admin.categories.vatRateHint")}
+          min={0}
+          max={100}
+          decimalScale={2}
+          suffix=" %"
+          value={vatRate}
+          onChange={(v) => setVatRate(v === "" ? "" : Number(v))}
+        />
       </SimpleGrid>
       <TagsInput
         label={t("admin.categories.keywords")}

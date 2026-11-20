@@ -23,6 +23,11 @@ import type {
   UpdateExpenseDTO,
 } from "@repo/models";
 import SourceBadge from "@/components/expense/SourceBadge";
+import BexioAccountSelect from "@/components/bexio/BexioAccountSelect";
+import {
+  EXPENSE_ACCOUNT_TYPES,
+  PAYMENT_ACCOUNT_TYPES,
+} from "@/components/bexio/bexioOptions";
 import { useUpdateExpenseMutation } from "@/store/slices/api";
 import { getErrorMessage } from "@/utils/apiError";
 import { formatRate } from "@/components/dashboard/dashboardFormat";
@@ -289,20 +294,22 @@ export default function ExpenseForm({
           </Text>
         </Stack>
         <SimpleGrid cols={{ base: 1, sm: 3 }}>
-          <TextInput
+          <BexioAccountSelect
             label={t("expenseDetail.debit")}
+            types={EXPENSE_ACCOUNT_TYPES}
             placeholder={booking.debitAccountNo ?? undefined}
             value={values.debitAccountNo}
             error={accountNoError(values.debitAccountNo)}
-            onChange={(e) => set("debitAccountNo", e.currentTarget.value)}
+            onChange={(accountNo) => set("debitAccountNo", accountNo)}
             readOnly={readOnly}
           />
-          <TextInput
+          <BexioAccountSelect
             label={t("expenseDetail.credit")}
+            types={PAYMENT_ACCOUNT_TYPES}
             placeholder={booking.creditAccountNo ?? undefined}
             value={values.creditAccountNo}
             error={accountNoError(values.creditAccountNo)}
-            onChange={(e) => set("creditAccountNo", e.currentTarget.value)}
+            onChange={(accountNo) => set("creditAccountNo", accountNo)}
             readOnly={readOnly}
           />
           <NumberInput

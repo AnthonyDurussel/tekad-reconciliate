@@ -52,6 +52,11 @@ export default function RevolutImportButton(props: ButtonProps) {
               to: formatDate(result.to),
             }),
           t("revolutImport.matched", { count: result.matched }),
+          result.cardsAdded.length > 0 &&
+            t("revolutImport.cardsAdded", {
+              count: result.cardsAdded.length,
+              cards: result.cardsAdded.join(", "),
+            }),
           result.errors.length > 0 &&
             t("revolutImport.errors", {
               count: result.errors.length,
