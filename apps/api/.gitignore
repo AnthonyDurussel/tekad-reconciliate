@@ -1,0 +1,9 @@
+local.settings.json
+.env
+dist/
+generated/
+__azurite_db*__.json
+__blobstorage__
+__queuestorage__
+*.zip
+release/

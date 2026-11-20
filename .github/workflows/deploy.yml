@@ -1,0 +1,100 @@
+name: Deploy
+
+# Deploys a published release (function-app.zip and frontend-dist.tar.gz of its GitHub release) to one
+# environment with the deploy configuration of that same release (deploy/env/<env>/): a rollback
+# brings back the settings it had. staging: called by Release on every tag. production: by hand
+# (Actions → Deploy → environment + tag), behind the reviewers of the GitHub environment.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      version:
+        description: Release tag, e.g. v1.2.3
+        type: string
+        required: true
+      seed:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment
+        type: choice
+        required: true
+        options: [staging, production]
+      version:
+        description: Release tag, e.g. v1.2.3
+        type: string
+        required: true
+      seed:
+        description: Load the reference lists (+ demo work days outside production; idempotent)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # OIDC: GitHub's token is exchanged for an Azure one, no secret stored.
+  id-token: write
+
+# One deployment at a time per environment, never cancelled halfway.
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  ONEPASSWORD_VAULT: Azure-Infra-Secret
+  ONEPASSWORD_ITEM: tekad-frais-infra
+
+jobs:
+  deploy:
+    name: ${{ inputs.version }} → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'production' && 'https://frais.tekad.ch' || 'https://tekad-frais.neuralis.dev' }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      VERSION: ${{ inputs.version }}
+      SEED: ${{ inputs.seed && 'true' || 'false' }}
+    steps:
+      - name: Check the version
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]] || { echo "::error::release tag expected (v1.2.3), got '$VERSION'"; exit 1; }
+      # The tag, not the branch: settings and Static Web App config travel with the code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.version }}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Deploy tooling (prisma, swa)
+        run: pnpm install --frozen-lockfile --filter @repo/deploy
+      - uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+      # The environment's managed identity (infra/scripts/github-oidc.sh), named by variables
+      # of the GitHub environment, not secrets.
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Sync the app secrets from 1Password to Key Vault
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: |
+          source "deploy/env/$ENVIRONMENT/deploy.env"
+          vault="$(az keyvault list -g "$RG" --query '[0].name' -o tsv)"
+          [ -n "$vault" ] || { echo "::error::no Key Vault in $RG: run Provision first"; exit 1; }
+          deploy/scripts/op-env.sh keyvault "op://$ONEPASSWORD_VAULT/$ONEPASSWORD_ITEM.$ENVIRONMENT.deploy/notesPlain" "$ENVIRONMENT" "$vault"
+      # Migrations, administrator (+ seed), app settings, Function App, SPA, health check
+      # (docs/DEPLOYMENT.md).
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: deploy/scripts/deploy.sh "$ENVIRONMENT" "$VERSION"
+      - name: Summary
+        if: success()
+        run: echo "### ${VERSION} déployée sur ${ENVIRONMENT}" >> "$GITHUB_STEP_SUMMARY"

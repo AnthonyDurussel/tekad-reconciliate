@@ -1,0 +1,9 @@
+{
+  "tagPrefix": "v",
+  "baseBranch": "main",
+  "sync": true,
+  "updateInternalDependencies": "patch",
+  "versionStrategy": "commitMessage",
+  "skipHooks": false,
+  "commitMessage": "release v${version}"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@repo/models",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/src/index.d.ts",
+        "import": "./dist/src/index.js",
+        "default": "./dist/src/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "yup": "^1.7.1"
+  }
+}

@@ -1,0 +1,204 @@
+// Tekad — réconciliation des frais Revolut Business / UBS / compte courant ↔ bexio
+// `*DB` = modèle Prisma, @@map = table.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+// URL de connexion des commandes Prisma (migrate…) : prisma.config.ts.
+// Le runtime passe par l'adaptateur pg (databaseConnection.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+// ===== COMPTES =====
+model UserDB {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  name                  String
+  /// Code de rôle (`RoleDTO`) : les permissions sont dans @repo/models.
+  role                  String
+  active                Boolean   @default(true)
+  /// Reçoit les e-mails de l'application.
+  notifications_enabled Boolean   @default(true)
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+  last_seen_at          DateTime?
+  /// Tenant Entra ID vérifié pour l'adresse : seul un jeton de ce tenant
+  /// ouvre le compte. Vide = non vérifié.
+  entra_tenant_id       String?
+  /// Invité externe (B2B) ajouté au tenant de l'application.
+  entra_guest           Boolean   @default(false)
+
+  sync_runs SyncRunDB[]
+
+  @@map("users")
+}
+
+// ===== PARAMÉTRAGE =====
+/// Compte qui paie : Revolut, UBS, compte courant d'Anthony…
+model PaymentAccountDB {
+  id                 String   @id @default(uuid())
+  /// `PaymentAccountKindDTO`
+  kind               String
+  name               String   @unique
+  /// Compte bexio crédité (1021, 1020, 2210…).
+  bexio_account_no   String?
+  /// `BookingModeDTO`
+  booking_mode       String   @default("MANUAL_ENTRY")
+  /// `account_id` Revolut des transactions de ce compte.
+  revolut_account_id String?  @unique
+  position           Int      @default(0)
+  active             Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  cards        PaymentCardDB[]
+  expenses     ExpenseDB[]
+  transactions RevolutTransactionDB[]
+
+  @@map("payment_accounts")
+}
+
+/// Carte reconnue sur les tickets par ses 4 derniers chiffres.
+model PaymentCardDB {
+  id         String  @id @default(uuid())
+  account_id String
+  last4      String  @unique
+  label      String?
+  holder     String?
+  active     Boolean @default(true)
+
+  account PaymentAccountDB @relation(fields: [account_id], references: [id], onDelete: Cascade)
+
+  @@map("payment_cards")
+}
+
+/// Type de dépense : compte de charge, TVA, règles de reconnaissance.
+model ExpenseCategoryDB {
+  id               String   @id @default(uuid())
+  code             String   @unique
+  label            String
+  bexio_account_no String
+  bexio_tax_id     Int?
+  vat_rate         Decimal? @db.Decimal(5, 2)
+  keywords         String[]
+  mcc_codes        String[]
+  position         Int      @default(0)
+  active           Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  expenses ExpenseDB[]
+
+  @@map("expense_categories")
+}
+
+// ===== PIÈCES =====
+/// Pièce comptable importée de l'inbox bexio.
+model ExpenseDB {
+  id            String   @id @default(uuid())
+  /// `ExpenseStatusDTO`
+  status        String   @default("NEW")
+  bexio_file_id String   @unique
+  file_name     String
+  mime_type     String?
+  imported_at   DateTime @default(now())
+
+  date            DateTime? @db.Date
+  merchant        String?
+  description     String?
+  total_amount    Decimal?  @db.Decimal(12, 2)
+  currency        String?
+  vat_amount      Decimal?  @db.Decimal(12, 2)
+  vat_rate        Decimal?  @db.Decimal(5, 2)
+  card_last4      String?
+  payment_method  String?
+  /// Résultat brut de la lecture (`ExtractionDTO`).
+  extraction      Json?
+  extracted_at    DateTime?
+  /// Champs saisis à la main : jamais écrasés par une relecture.
+  manual_fields   String[]
+
+  payment_account_id     String?
+  /// `SuggestionSourceDTO`
+  payment_account_source String?
+  category_id            String?
+  category_source        String?
+
+  debit_account_no  String?
+  credit_account_no String?
+  bexio_tax_id      Int?
+
+  bexio_entry_id String?
+  booked_at      DateTime?
+  booked_by_id   String?
+  note           String?
+  ignore_reason  String?
+  updated_at     DateTime  @updatedAt
+
+  payment_account PaymentAccountDB?     @relation(fields: [payment_account_id], references: [id])
+  category        ExpenseCategoryDB?    @relation(fields: [category_id], references: [id])
+  transaction     RevolutTransactionDB?
+
+  @@index([status])
+  @@index([date])
+  @@map("expenses")
+}
+
+/// Une jambe de transaction Revolut Business sur un compte de la société.
+model RevolutTransactionDB {
+  id                 String   @id @default(uuid())
+  /// `id` Revolut + `leg_id` : une ligne par jambe.
+  revolut_id         String
+  leg_id             String
+  revolut_account_id String
+  payment_account_id String?
+  type               String
+  state              String
+  occurred_at        DateTime
+  description        String?
+  merchant_name      String?
+  merchant_city      String?
+  merchant_country   String?
+  mcc                String?
+  amount             Decimal  @db.Decimal(12, 2)
+  currency           String
+  bill_amount        Decimal? @db.Decimal(12, 2)
+  bill_currency      String?
+  card_last4         String?
+  requires_receipt   Boolean
+  /// Pièce rapprochée : une transaction n'en a qu'une.
+  expense_id         String?  @unique
+  ignored            Boolean  @default(false)
+  ignore_reason      String?
+  raw                Json?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  payment_account PaymentAccountDB? @relation(fields: [payment_account_id], references: [id])
+  expense         ExpenseDB?        @relation(fields: [expense_id], references: [id], onDelete: SetNull)
+
+  @@unique([revolut_id, leg_id])
+  @@index([occurred_at])
+  @@map("revolut_transactions")
+}
+
+// ===== SYNCHRONISATIONS =====
+model SyncRunDB {
+  id              String    @id @default(uuid())
+  /// `SyncSourceDTO`
+  source          String
+  started_at      DateTime  @default(now())
+  finished_at     DateTime?
+  success         Boolean?
+  count           Int       @default(0)
+  message         String?
+  triggered_by_id String?
+
+  triggered_by UserDB? @relation(fields: [triggered_by_id], references: [id], onDelete: SetNull)
+
+  @@index([source, started_at])
+  @@map("sync_runs")
+}

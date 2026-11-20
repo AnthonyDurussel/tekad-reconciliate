@@ -1,0 +1,108 @@
+name: CI
+
+# Models, API (migrations applied to a real PostgreSQL), SPA: typecheck, lint, tests, builds, the
+# Azure Functions package; then the Bicep templates and the shell scripts. Called by Release on
+# the tag it builds.
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to check (default the caller's ref)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://tekad:tekad@localhost:5433/tekad_test?schema=public
+
+jobs:
+  checks:
+    name: Typecheck, lint, tests, builds
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tekad
+          POSTGRES_PASSWORD: tekad
+          POSTGRES_DB: tekad_test
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tekad -d tekad_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # postinstall: prisma generate for the API.
+      - run: pnpm install --frozen-lockfile
+
+      # @repo/models is consumed from its dist/ by both apps: built first.
+      - name: Models (build, tests)
+        run: |
+          pnpm --filter @repo/models build
+          pnpm --filter @repo/models test
+
+      - name: API migrations (test database)
+        run: pnpm --filter api migrate:deploy
+      - name: API typecheck, lint, tests
+        run: |
+          pnpm --filter api typecheck
+          pnpm --filter api eslint
+          pnpm --filter api test
+      - name: API seed (paramétrage + démonstration, twice — idempotent)
+        run: |
+          pnpm --filter api seed
+          pnpm --filter api seed
+      - name: API build and Azure Functions package
+        run: |
+          pnpm --filter api prepare-release
+          size=$(stat -c %s apps/api/release/function-app.zip)
+          echo "function-app.zip: $((size / 1024 / 1024)) MB" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Frontend typecheck, i18n, lint, tests, build
+        run: |
+          pnpm --filter frontend typecheck
+          pnpm --filter frontend check-i18n
+          pnpm --filter frontend eslint
+          pnpm --filter frontend prettier
+          pnpm --filter frontend vitest
+          pnpm --filter frontend build
+
+  infra:
+    name: Bicep and scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      # The runner's Azure CLI installs Bicep on first use; nothing is deployed here.
+      - name: Build and lint the templates
+        run: |
+          az bicep install
+          az bicep build --file infra/main.bicep --stdout > /dev/null
+          az bicep lint --file infra/main.bicep
+          for env in staging production; do
+            set -a; source "infra/env/$env.env"; set +a
+            POSTGRESQL_ADMIN_PASSWORD=ci-only az bicep build-params --file infra/main.bicepparam --stdout > /dev/null
+          done
+      - name: Deploy configuration is valid JSON
+        run: for f in deploy/env/*/*.json; do python3 -m json.tool "$f" > /dev/null || exit 1; done
+      - name: Shell scripts
+        run: shellcheck deploy/scripts/*.sh infra/scripts/*.sh scripts/*.sh

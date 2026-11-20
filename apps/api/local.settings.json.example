@@ -1,0 +1,35 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "DATABASE_URL": "postgresql://<user>:<password>@localhost:5432/tekad?schema=public",
+    "DATABASE_SCHEMA": "public",
+    "ENVIRONMENT": "development",
+    "APP_PUBLIC_URL": "http://localhost:5173",
+    "//bexio": "Jeton personnel bexio (Paramètres → Sécurité → Jetons d'accès personnels), portées : fichiers, comptabilité. Vide : imports et écritures désactivés (409).",
+    "BEXIO_API_TOKEN": "",
+    "BEXIO_API_URL": "https://api.bexio.com",
+    "//revolut": "Revolut Business API : certificat (clé privée PEM, \\n échappés), client_id, domaine de l'URI de redirection (iss du JWT), refresh token obtenu au consentement. Sandbox : https://sandbox-b2b.revolut.com/api/1.0",
+    "REVOLUT_API_URL": "https://b2b.revolut.com/api/1.0",
+    "REVOLUT_CLIENT_ID": "",
+    "REVOLUT_PRIVATE_KEY": "",
+    "REVOLUT_ISSUER": "",
+    "REVOLUT_REFRESH_TOKEN": "",
+    "//claude": "Lecture des pièces (vision Claude). Vide : lecture désactivée.",
+    "ANTHROPIC_API_KEY": "",
+    "RECEIPT_MODEL": "claude-opus-5-5",
+    "SYNC_CRON": "0 15 5 * * *",
+    "ACS_ENDPOINT": "",
+    "ACS_ACCESS_KEY": "",
+    "ACS_SENDER_ADDRESS": "",
+    "//entra": "Gestion des comptes (POST/PUT users) : vérifie que le domaine de l'adresse appartient au tenant de l'App Registration de la connexion (ENTRA_APP_CLIENT_ID) ou à un tenant qu'elle autorise (« Supported accounts », « Allow only certain tenants ») ; sinon 409. Le tenant est retenu sur le compte et l'extracteur de rôles refuse un jeton d'un autre tenant. App Registration Graph à part (ENTRA_GRAPH_CLIENT_ID/SECRET), permissions d'application consenties : Application.Read.All, CrossTenantInformation.ReadBasic.All. Toutes vides : rien n'est vérifié ; partielles : 409.",
+    "ENTRA_TENANT_ID": "",
+    "ENTRA_GRAPH_CLIENT_ID": "",
+    "ENTRA_GRAPH_CLIENT_SECRET": "",
+    "ENTRA_APP_CLIENT_ID": ""
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

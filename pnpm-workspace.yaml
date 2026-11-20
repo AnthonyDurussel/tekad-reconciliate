@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+  - deploy
+
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': false
+  '@swc/core': false
+  canvas: false
+  esbuild: false
+  keytar: false
+  prisma: false
+
+# Ne pas installer une version publiée il y a moins de 24 h (minutes).
+minimumReleaseAge: 1440

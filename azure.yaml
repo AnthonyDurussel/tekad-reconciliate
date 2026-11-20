@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# Infrastructure only (`azd provision`, .github/workflows/provision.yml). The application is
+# deployed by deploy/ from a published release, not by `azd deploy`.
+name: tekad-reconciliate
+infra:
+  provider: bicep
+  path: infra
+  module: main

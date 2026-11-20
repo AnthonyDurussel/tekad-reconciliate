@@ -1,0 +1,149 @@
+name: Release
+
+# Cuts a release from main with scripts/release.sh (versions, CHANGELOG.md, commit + tag vX.Y.Z),
+# builds it once — the Azure Functions package and the SPA — publishes both on the GitHub
+# release, then deploys it to staging. Production gets the same release through Deploy, by hand.
+#
+#   Actions → Release → "Run workflow" (or a workflow_dispatch from Claude Code)
+#   or a tag vX.Y.Z pushed by hand (`pnpm release` then `git push --follow-tags`).
+#
+# A tag pushed with GITHUB_TOKEN triggers no workflow: the jobs below follow the version job.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version type (auto = from the Conventional Commits since the last tag)
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version and tag
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # No postinstall: the release only runs turboversion and prettier.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - id: release
+        name: pnpm release
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          before="$(git rev-parse HEAD)"
+          args=()
+          [ "$BUMP" = auto ] || args=(--bump "$BUMP")
+          pnpm release "${args[@]}"
+          if [ "$(git rev-parse HEAD)" = "$before" ]; then
+            echo "### Rien à publier depuis le dernier tag" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          tag="$(git describe --tags --exact-match HEAD)"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "### Release ${tag} taguée" >> "$GITHUB_STEP_SUMMARY"
+
+  plan:
+    name: Tag to build
+    needs: version
+    # The version job is skipped on a pushed tag: run anyway, then.
+    if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        env:
+          FROM_VERSION: ${{ needs.version.outputs.tag }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then tag="$GITHUB_REF_NAME"; else tag="$FROM_VERSION"; fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  checks:
+    name: CI
+    needs: plan
+    if: always() && needs.plan.outputs.tag != ''
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: refs/tags/${{ needs.plan.outputs.tag }}
+
+  build:
+    name: Build and publish ${{ needs.plan.outputs.tag }}
+    needs: [plan, checks]
+    if: always() && needs.plan.outputs.tag != '' && needs.checks.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.plan.outputs.tag }}
+      # prisma generate (postinstall) reads it; nothing connects at build time.
+      DATABASE_URL: postgresql://build:build@localhost:5432/build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ needs.plan.outputs.tag }}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build @repo/models
+        run: pnpm --filter @repo/models build
+      - name: Package the API (function-app.zip)
+        run: |
+          pnpm --filter api prepare-release
+          mv apps/api/release/function-app.zip function-app.zip
+      - name: Package the frontend (frontend-dist.tar.gz)
+        run: |
+          pnpm --filter frontend prepare-release
+          mv apps/frontend/frontend-dist.tar.gz frontend-dist.tar.gz
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="$(git tag -l --format='%(contents)' "$TAG")"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" function-app.zip frontend-dist.tar.gz --clobber
+          else
+            gh release create "$TAG" function-app.zip frontend-dist.tar.gz --title "$TAG" --notes "${notes:-$TAG}" --verify-tag
+          fi
+          echo "### Release ${TAG} publiée (function-app.zip, frontend-dist.tar.gz)" >> "$GITHUB_STEP_SUMMARY"
+
+  staging:
+    name: Staging
+    needs: [plan, build]
+    if: always() && needs.build.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      version: ${{ needs.plan.outputs.tag }}
+    secrets: inherit
