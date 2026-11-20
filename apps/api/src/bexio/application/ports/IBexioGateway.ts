@@ -75,11 +75,16 @@ export interface IBexioGateway {
   /** UUID d'un fichier connu par son id. */
   fileUuid(id: string): Promise<string>;
   listBankAccounts(): Promise<BexioBankAccount[]>;
-  /** Les dépenses, filtrées par date de paiement et fournisseur (pages de 500). */
+  /**
+   * Les dépenses, filtrées par date de paiement et fournisseur (pages de 500).
+   * La liste bexio ne donne pas le compte bancaire payeur : `withBankAccount`
+   * le lit au détail de chaque dépense (mis en cache).
+   */
   listExpenses(filter?: {
     paidFrom?: string;
     paidTo?: string;
     vendor?: string;
+    withBankAccount?: boolean;
   }): Promise<BexioExpense[]>;
   /** Une dépense (`null` si elle n'existe pas). */
   getExpense(id: string): Promise<BexioExpense | null>;

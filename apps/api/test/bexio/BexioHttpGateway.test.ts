@@ -120,19 +120,27 @@ describe("BexioHttpGateway", () => {
       if (path.startsWith("4.0/expenses?")) {
         const page = Number(/page=(\d+)/.exec(path)![1]);
         return new Response(JSON.stringify({
-          data: [{ id: `e${page}`, document_no: `AU-${page}`, status: "DONE", lastname_company: "Swisscom", paid_on: "2026-11-02", gross: "89.90", currency_code: "CHF", bank_account_id: 5, attachment_ids: [] }],
+          data: [{ id: `e${page}`, document_no: `AU-${page}`, status: "DONE", lastname_company: "Swisscom", paid_on: "2026-11-02", gross: "89.90", currency_code: "CHF", attachment_ids: [] }],
           paging: { page, page_count: 2 },
         }));
       }
       if (path === "4.0/expenses" && init.method === "POST") return new Response(JSON.stringify({ id: "new-uuid" }));
-      if (path === "4.0/expenses/e1" && !init.method) {
-        return new Response(JSON.stringify({ id: "e1", document_no: "AU-1", paid_on: "2026-11-02", currency_code: "CHF", amount: 89.9, gross: 89.9, bank_account_id: 5, booking_account_id: 10, attachment_ids: ["a"] }));
+      // Le détail donne le compte bancaire payeur et `amount` (pas `gross`).
+      if (/^4\.0\/expenses\/e\d$/.test(path) && !init.method) {
+        return new Response(JSON.stringify({ id: path.slice(12), document_no: "AU-1", paid_on: "2026-11-02", currency_code: "CHF", amount: 89.9, bank_account_id: 5, booking_account_id: 10, attachment_ids: ["a"] }));
       }
       return new Response("{}");
     }) as typeof fetch;
     const g = new BexioHttpGateway("t", undefined, impl);
     const list = await g.listExpenses();
-    expect(list.map((e) => [e.id, e.vendor, e.gross])).toEqual([["e1", "Swisscom", 89.9], ["e2", "Swisscom", 89.9]]);
+    expect(list.map((e) => [e.id, e.vendor, e.gross, e.bankAccountId])).toEqual([["e1", "Swisscom", 89.9, null], ["e2", "Swisscom", 89.9, null]]);
+    const withBank = await g.listExpenses({ withBankAccount: true });
+    expect(withBank.map((e) => e.bankAccountId)).toEqual([5, 5]);
+    const details = calls.filter((c) => /^4\.0\/expenses\/e\d$/.test(c.url)).length;
+    await g.listExpenses({ withBankAccount: true });
+    // Compte bancaire gardé en cache : pas de nouveaux détails.
+    expect(calls.filter((c) => /^4\.0\/expenses\/e\d$/.test(c.url))).toHaveLength(details);
+    expect((await g.getExpense("e1"))?.gross).toBe(89.9);
     expect(await g.createExpense({ paidOn: "2026-11-02", title: "Swisscom", amountChf: 89.9, bankAccountId: 5, bookingAccountId: 10, taxId: 12, attachmentIds: ["u1"] })).toBe("new-uuid");
     expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ paid_on: "2026-11-02", amount: 89.9, currency_code: "CHF", bank_account_id: 5, booking_account_id: 10, tax_id: 12, attachment_ids: ["u1"] });
     expect(calls.some((c) => c.url === "4.0/expenses/new-uuid/bookings/DONE" && c.method === "PUT")).toBe(true);

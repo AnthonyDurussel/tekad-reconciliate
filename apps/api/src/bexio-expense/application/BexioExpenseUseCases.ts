@@ -42,6 +42,7 @@ export class BexioExpenseUseCases {
       paidFrom: query.from,
       paidTo: query.to,
       vendor: query.search,
+      withBankAccount: true,
     });
     const dtos = await this.toDTOs(rows);
     return query.unlinked ? dtos.filter((d) => !d.expenseId) : dtos;

@@ -53,7 +53,9 @@ interface BexioExpenseRow {
   lastname_company?: string | null;
   status: string;
   paid_on?: string | null;
-  gross: number | string;
+  /** Liste : `gross` ; détail : `amount`. */
+  gross?: number | string | null;
+  amount?: number | string | null;
   currency_code: string;
   booking_account_id?: number | null;
   bank_account_id?: number | null;
@@ -64,7 +66,6 @@ interface BexioExpenseRow {
 interface BexioExpenseDetail extends BexioExpenseRow {
   supplier_id?: number | null;
   exchange_rate?: number | null;
-  amount?: number | null;
   tax_id?: number | null;
   base_currency_amount?: number | null;
   address?: Record<string, unknown> | null;
@@ -80,7 +81,7 @@ export const toBexioExpense = (r: BexioExpenseRow): BexioExpense => ({
     null,
   status: r.status,
   paidOn: r.paid_on ? r.paid_on.slice(0, 10) : null,
-  gross: Number(r.gross),
+  gross: Number(r.gross ?? r.amount ?? 0),
   currency: r.currency_code,
   bookingAccountId: r.booking_account_id ?? null,
   bankAccountId: r.bank_account_id ?? null,
@@ -291,9 +292,61 @@ export class BexioHttpGateway implements IBexioGateway {
     }));
   }
 
+  /** Compte bancaire payeur par dépense (lu au détail), gardé 10 minutes. */
+  private bankOf = new Map<
+    string,
+    { at: number; bankAccountId: number | null }
+  >();
+
+  /**
+   * La liste de bexio ne donne pas le compte bancaire payeur : il est lu au
+   * détail de chaque dépense (6 en parallèle), puis gardé en cache.
+   */
+  private async withBankAccounts(rows: BexioExpense[]): Promise<void> {
+    const now = Date.now();
+    const todo = rows.filter((r) => {
+      // Déjà donné par la liste : rien à relire.
+      if (r.bankAccountId !== null) return false;
+      const hit = this.bankOf.get(r.id);
+      if (hit && now - hit.at < 600_000) {
+        r.bankAccountId = hit.bankAccountId;
+        return false;
+      }
+      return true;
+    });
+    let next = 0;
+    const worker = async () => {
+      while (next < todo.length) {
+        const row = todo[next++];
+        const detail = await this.getExpense(row.id);
+        row.bankAccountId = detail?.bankAccountId ?? null;
+        this.bankOf.set(row.id, {
+          at: Date.now(),
+          bankAccountId: row.bankAccountId,
+        });
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
+  }
+
   async listExpenses(
-    filter: { paidFrom?: string; paidTo?: string; vendor?: string } = {},
+    filter: {
+      paidFrom?: string;
+      paidTo?: string;
+      vendor?: string;
+      withBankAccount?: boolean;
+    } = {},
   ): Promise<BexioExpense[]> {
+    const all = await this.loadExpenses(filter);
+    if (filter.withBankAccount) await this.withBankAccounts(all);
+    return all;
+  }
+
+  private async loadExpenses(filter: {
+    paidFrom?: string;
+    paidTo?: string;
+    vendor?: string;
+  }): Promise<BexioExpense[]> {
     const all: BexioExpense[] = [];
     const params = new URLSearchParams({
       limit: "500",
