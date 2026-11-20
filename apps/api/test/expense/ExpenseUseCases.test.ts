@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExpenseStatusDTO, type ExtractionDTO } from "@repo/models";
+import { BexioAccountTypeDTO, ExpenseStatusDTO, type ExtractionDTO } from "@repo/models";
 import { ConflictError, InvalidStateError } from "@/shared/domain/errors.js";
 import { Expense } from "@/expense/domain/Expense.js";
 import { ExpenseUseCases } from "@/expense/application/usecases/ExpenseUseCases.js";
@@ -8,6 +8,7 @@ import type { ISettingsRepository } from "@/settings/application/repositories/IS
 import type { IRevolutTransactionRepository } from "@/revolut/application/repositories/IRevolutTransactionRepository.js";
 import type { RevolutTransactionProps } from "@/revolut/domain/RevolutTransaction.js";
 import type {
+  BexioExpenseInput,
   BexioManualEntryInput,
   IBexioGateway,
 } from "@/bexio/application/ports/IBexioGateway.js";
@@ -26,6 +27,13 @@ class MemoryExpenses implements Partial<IExpenseRepository> {
   async existingFileIds(ids: string[]) {
     const known = new Set([...this.rows.values()].map((e) => e.snapshot.bexioFileId));
     return new Set(ids.filter((id) => known.has(id)));
+  }
+  async setMissingFileUuids() {}
+  async findByFileUuids(uuids: string[]) {
+    return [...this.rows.values()].filter((e) => uuids.includes(e.snapshot.bexioFileUuid ?? ""));
+  }
+  async findByBexioExpenseIds(ids: string[]) {
+    return [...this.rows.values()].filter((e) => ids.includes(e.snapshot.bexioExpenseId ?? ""));
   }
   async listByStatus(statuses: ExpenseStatusDTO[], limit?: number) {
     return [...this.rows.values()]
@@ -76,19 +84,33 @@ function setup(readings: Record<string, ExtractionDTO>) {
   const expenses = new MemoryExpenses();
   const txs = new MemoryTransactions();
   const entries: BexioManualEntryInput[] = [];
+  const created: BexioExpenseInput[] = [];
   const bexio: IBexioGateway = {
     configured: true,
     listInboxFiles: async () => [
-      { id: "f1", name: "swisscom.pdf", mimeType: "application/pdf", createdAt: null },
-      { id: "f2", name: "ubs.jpg", mimeType: "image/jpeg", createdAt: null },
+      { id: "f1", uuid: "uuid-f1", name: "swisscom.pdf", mimeType: "application/pdf", createdAt: null },
+      { id: "f2", uuid: "uuid-f2", name: "ubs.jpg", mimeType: "image/jpeg", createdAt: null },
     ],
     downloadFile: async (id) => ({
       fileName: `${id}.pdf`,
       mimeType: "application/pdf",
       data: Buffer.from(id),
     }),
-    listAccounts: async () => [],
+    // 1021 Revolut est un compte bancaire de bexio ; 2210 (compte courant) non.
+    listAccounts: async () => [
+      { id: 2, accountNo: "1021", name: "Revolut", type: BexioAccountTypeDTO.ASSET, taxId: null, active: true },
+      { id: 3, accountNo: "2210", name: "CC Anthony", type: BexioAccountTypeDTO.LIABILITY, taxId: null, active: true },
+      { id: 10, accountNo: "6510", name: "Télécom", type: BexioAccountTypeDTO.EXPENSE, taxId: null, active: true },
+    ],
     listTaxes: async () => [],
+    listBankAccounts: async () => [{ id: 5, name: "Revolut", accountId: 2, iban: null }],
+    fileUuid: async (id) => `uuid-${id}`,
+    listExpenses: async () => [],
+    createExpense: async (input) => {
+      created.push(input);
+      return "exp-uuid-1";
+    },
+    attachFilesToExpense: async () => {},
     createManualEntry: async (input) => {
       entries.push(input);
       return "bexio-42";
@@ -105,12 +127,12 @@ function setup(readings: Record<string, ExtractionDTO>) {
     bexio,
     reader,
   );
-  return { useCases, expenses, txs, entries };
+  return { useCases, expenses, txs, entries, created };
 }
 
 describe("ExpenseUseCases", () => {
-  it("inbox → lecture → rapprochement → écriture bexio", async () => {
-    const { useCases, expenses, txs, entries } = setup({
+  it("inbox → lecture → rapprochement → dépense bexio, pièce jointe", async () => {
+    const { useCases, expenses, txs, entries, created } = setup({
       f1: extraction(),
       f2: extraction({ merchant: "Galaxus", cardLast4: "7777", totalAmount: 120 }),
     });
@@ -129,14 +151,33 @@ describe("ExpenseUseCases", () => {
 
     const booked = await useCases.book(swisscom.id, "u1");
     expect(booked.expense.status).toBe(ExpenseStatusDTO.BOOKED);
-    expect(booked.expense.snapshot.bexioEntryId).toBe("bexio-42");
-    expect(entries[0]).toMatchObject({
-      debitAccountNo: "6510",
-      creditAccountNo: "1021",
+    // Revolut (1021) est un compte bancaire bexio : une dépense, pas d'écriture.
+    expect(booked.expense.snapshot.bexioExpenseId).toBe("exp-uuid-1");
+    expect(booked.expense.snapshot.bexioEntryId).toBeNull();
+    expect(entries).toHaveLength(0);
+    expect(created[0]).toEqual({
+      paidOn: "2026-11-02",
+      title: expect.stringContaining("Swisscom"),
       amountChf: 89.9,
+      bankAccountId: 5,
+      bookingAccountId: 10,
       taxId: 12,
-      date: "2026-11-02",
+      attachmentIds: ["uuid-f1"],
     });
+  });
+
+  it("compte courant (pas un compte bancaire bexio) : écriture manuelle", async () => {
+    const { useCases, expenses, entries, created } = setup({
+      f1: extraction({ cardLast4: "1234" }),
+      f2: extraction({ cardLast4: "1234" }),
+    });
+    await useCases.importInbox();
+    await useCases.extractPending();
+    const first = [...expenses.rows.values()][0];
+    const view = await useCases.book(first.id, "u1");
+    expect(view.expense.snapshot.bexioEntryId).toBe("bexio-42");
+    expect(created).toHaveLength(0);
+    expect(entries[0]).toMatchObject({ debitAccountNo: "6510", creditAccountNo: "2210", amountChf: 89.9 });
     expect(entries[0].attachment?.data.toString()).toBe("f1");
   });
 

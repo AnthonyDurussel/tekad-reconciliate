@@ -13,6 +13,7 @@ import { configureAiContainer } from "@/ai/infrastructure/ioc/container.ai.js";
 import { configureExtractionContainer } from "@/extraction/infrastructure/ioc/container.extraction.js";
 import { configureRevolutContainer } from "@/revolut/infrastructure/ioc/container.revolut.js";
 import { configureExpenseContainer } from "@/expense/infrastructure/ioc/container.expense.js";
+import { configureBexioExpenseContainer } from "@/bexio-expense/infrastructure/ioc/container.bexio-expense.js";
 import { configureSyncContainer } from "@/sync/infrastructure/ioc/container.sync.js";
 import { configureDashboardContainer } from "@/dashboard/infrastructure/ioc/container.dashboard.js";
 
@@ -40,6 +41,7 @@ export function createRequestContainer(
       configureExtractionContainer(options);
       configureRevolutContainer(options);
       configureExpenseContainer(options);
+      configureBexioExpenseContainer(options);
       configureSyncContainer(options);
       configureDashboardContainer(options);
     }),

@@ -258,8 +258,10 @@ export class ExpenseUseCases {
   }
 
   /**
-   * Comptabilise une pièce prête : écriture manuelle dans bexio (pièce
-   * jointe) ou, pour un compte rapproché dans bexio (UBS), simple marque.
+   * Comptabilise une pièce prête : une dépense bexio (« Ausgabe », pièce
+   * jointe) quand le compte crédité est un compte bancaire de bexio, sinon
+   * une écriture manuelle (compte courant…) ; pour un compte rapproché dans
+   * bexio (UBS), simple marque — la dépense naît du rapprochement bexio.
    */
   async book(id: string, userId: string | null): Promise<ExpenseView> {
     const { expense, ctx } = await this.load(id);
@@ -273,22 +275,72 @@ export class ExpenseUseCases {
       );
     }
     let entryId: string | null = null;
+    let bexioExpenseId: string | null = null;
     if (booking.mode === BookingModeDTO.MANUAL_ENTRY) {
-      const file = await this.bexio.downloadFile(expense.snapshot.bexioFileId);
-      entryId = await this.bexio.createManualEntry({
-        date: booking.date!,
-        reference: expense.snapshot.fileName,
-        description: booking.description,
-        amountChf: booking.amountChf!,
-        debitAccountNo: booking.debitAccountNo!,
-        creditAccountNo: booking.creditAccountNo!,
-        taxId: booking.bexioTaxId,
-        attachment: file,
-      });
+      const target = await this.bexioExpenseTarget(
+        booking.creditAccountNo!,
+        booking.debitAccountNo!,
+      );
+      if (target) {
+        // Compte bancaire dans bexio : une dépense (« Ausgabe »), pièce jointe.
+        bexioExpenseId = await this.bexio.createExpense({
+          paidOn: booking.date!,
+          title: booking.description,
+          amountChf: booking.amountChf!,
+          bankAccountId: target.bankAccountId,
+          bookingAccountId: target.bookingAccountId,
+          taxId: booking.bexioTaxId,
+          attachmentIds: [await this.fileUuid(expense)],
+        });
+      } else {
+        // Sans compte bancaire (compte courant…) : écriture manuelle.
+        const file = await this.bexio.downloadFile(
+          expense.snapshot.bexioFileId,
+        );
+        entryId = await this.bexio.createManualEntry({
+          date: booking.date!,
+          reference: expense.snapshot.fileName,
+          description: booking.description,
+          amountChf: booking.amountChf!,
+          debitAccountNo: booking.debitAccountNo!,
+          creditAccountNo: booking.creditAccountNo!,
+          taxId: booking.bexioTaxId,
+          attachment: file,
+        });
+      }
     }
-    expense.markBooked(entryId, userId);
+    expense.markBooked(entryId, userId, new Date(), bexioExpenseId);
     await this.expenses.save(expense);
     return this.load(id);
+  }
+
+  /** L'UUID du fichier de la pièce (lu dans bexio s'il manque). */
+  private async fileUuid(expense: Expense): Promise<string> {
+    if (expense.snapshot.bexioFileUuid) return expense.snapshot.bexioFileUuid;
+    const uuid = await this.bexio.fileUuid(expense.snapshot.bexioFileId);
+    expense.setFileUuid(uuid);
+    return uuid;
+  }
+
+  /**
+   * Le compte bancaire bexio du compte crédité et l'id du compte de charge :
+   * `null` quand le compte crédité n'est pas un compte bancaire de bexio.
+   */
+  private async bexioExpenseTarget(
+    creditAccountNo: string,
+    debitAccountNo: string,
+  ): Promise<{ bankAccountId: number; bookingAccountId: number } | null> {
+    const [chart, banks] = await Promise.all([
+      this.bexio.listAccounts(),
+      this.bexio.listBankAccounts(),
+    ]);
+    const credit = chart.find((a) => a.accountNo === creditAccountNo);
+    const debit = chart.find((a) => a.accountNo === debitAccountNo);
+    const bank = credit
+      ? banks.find((b) => b.accountId === credit.id)
+      : undefined;
+    if (!bank || !debit) return null;
+    return { bankAccountId: bank.id, bookingAccountId: debit.id };
   }
 
   async unbook(id: string): Promise<ExpenseView> {
@@ -305,6 +357,13 @@ export class ExpenseUseCases {
     const files = await this.bexio.listInboxFiles();
     if (!files.length) return 0;
     const known = await this.expenses.existingFileIds(files.map((f) => f.id));
+    await this.expenses.setMissingFileUuids(
+      new Map(
+        files
+          .filter((f) => f.uuid && known.has(f.id))
+          .map((f) => [f.id, f.uuid!]),
+      ),
+    );
     let created = 0;
     for (const file of files) {
       if (known.has(file.id)) continue;
@@ -312,6 +371,7 @@ export class ExpenseUseCases {
         Expense.importFromInbox({
           id: randomUUID(),
           bexioFileId: file.id,
+          bexioFileUuid: file.uuid,
           fileName: file.name,
           mimeType: file.mimeType,
         }),

@@ -7,6 +7,9 @@ import type { StoredFile } from "@/shared/application/ports/StoredFile.js";
 import { ConflictError, InternalServerError } from "@/shared/domain/errors.js";
 import { log } from "@/shared/infrastructure/logging/logger.js";
 import type {
+  BexioBankAccount,
+  BexioExpense,
+  BexioExpenseInput,
   BexioInboxFile,
   BexioManualEntryInput,
   IBexioGateway,
@@ -14,6 +17,7 @@ import type {
 
 interface BexioFileRow {
   id: number;
+  uuid?: string | null;
   name: string;
   extension?: string | null;
   mime_type?: string | null;
@@ -39,6 +43,50 @@ interface BexioTaxRow {
   type?: string | null;
   is_active?: boolean | null;
 }
+
+interface BexioExpenseRow {
+  id: string;
+  document_no: string;
+  title?: string | null;
+  vendor?: string | null;
+  firstname_suffix?: string | null;
+  lastname_company?: string | null;
+  status: string;
+  paid_on?: string | null;
+  gross: number | string;
+  currency_code: string;
+  booking_account_id?: number | null;
+  bank_account_id?: number | null;
+  transaction_id?: string | null;
+  attachment_ids?: string[] | null;
+}
+
+interface BexioExpenseDetail extends BexioExpenseRow {
+  supplier_id?: number | null;
+  exchange_rate?: number | null;
+  amount?: number | null;
+  tax_id?: number | null;
+  base_currency_amount?: number | null;
+  address?: Record<string, unknown> | null;
+}
+
+export const toBexioExpense = (r: BexioExpenseRow): BexioExpense => ({
+  id: r.id,
+  documentNo: r.document_no,
+  title: r.title || null,
+  vendor:
+    r.vendor ||
+    [r.firstname_suffix, r.lastname_company].filter(Boolean).join(" ") ||
+    null,
+  status: r.status,
+  paidOn: r.paid_on ? r.paid_on.slice(0, 10) : null,
+  gross: Number(r.gross),
+  currency: r.currency_code,
+  bookingAccountId: r.booking_account_id ?? null,
+  bankAccountId: r.bank_account_id ?? null,
+  transactionId: r.transaction_id || null,
+  attachmentIds: r.attachment_ids ?? [],
+});
 
 /** `account_type` de bexio : 1 produits, 2 charges, 3 actifs, 4 passifs, 5 clôture. */
 const ACCOUNT_TYPES: Record<number, BexioAccountTypeDTO> = {
@@ -134,6 +182,7 @@ export class BexioHttpGateway implements IBexioGateway {
         if (row.is_archived) continue;
         files.push({
           id: String(row.id),
+          uuid: row.uuid ?? null,
           name:
             row.extension && !row.name.endsWith(`.${row.extension}`)
               ? `${row.name}.${row.extension}`
@@ -175,6 +224,95 @@ export class BexioHttpGateway implements IBexioGateway {
   async listTaxes(): Promise<BexioTaxDTO[]> {
     const rows = await this.json<BexioTaxRow[]>("3.0/taxes?limit=500");
     return rows.map(toBexioTax);
+  }
+
+  async fileUuid(id: string): Promise<string> {
+    const file = await this.json<BexioFileRow>(
+      `3.0/files/${encodeURIComponent(id)}`,
+    );
+    if (!file.uuid) throw new InternalServerError("fichier bexio sans uuid");
+    return file.uuid;
+  }
+
+  async listBankAccounts(): Promise<BexioBankAccount[]> {
+    const rows = await this.json<
+      {
+        id: number;
+        name: string;
+        account_id?: number | null;
+        iban_nr?: string | null;
+      }[]
+    >("3.0/banking/accounts");
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      accountId: r.account_id ?? null,
+      iban: r.iban_nr || null,
+    }));
+  }
+
+  async listExpenses(): Promise<BexioExpense[]> {
+    const all: BexioExpense[] = [];
+    for (let page = 1; ; page++) {
+      const body = await this.json<{
+        data: BexioExpenseRow[];
+        paging?: { page_count?: number };
+      }>(`4.0/expenses?limit=500&page=${page}&sort=paid_on&order=desc`);
+      all.push(...body.data.map(toBexioExpense));
+      const pages = body.paging?.page_count ?? 1;
+      if (page >= pages || body.data.length === 0) return all;
+    }
+  }
+
+  async createExpense(input: BexioExpenseInput): Promise<string> {
+    const created = await this.json<{ id: string }>("4.0/expenses", {
+      method: "POST",
+      body: JSON.stringify({
+        paid_on: input.paidOn,
+        title: input.title.slice(0, 255),
+        currency_code: "CHF",
+        amount: input.amountChf,
+        bank_account_id: input.bankAccountId,
+        booking_account_id: input.bookingAccountId,
+        tax_id: input.taxId ?? undefined,
+        attachment_ids: input.attachmentIds,
+      }),
+    });
+    await this.call(
+      `4.0/expenses/${encodeURIComponent(created.id)}/bookings/DONE`,
+      { method: "PUT" },
+    );
+    return created.id;
+  }
+
+  async attachFilesToExpense(
+    expenseId: string,
+    fileUuids: string[],
+  ): Promise<void> {
+    const path = `4.0/expenses/${encodeURIComponent(expenseId)}`;
+    const e = await this.json<BexioExpenseDetail>(path);
+    const attachments = [
+      ...new Set([...(e.attachment_ids ?? []), ...fileUuids]),
+    ];
+    // PUT remplace la dépense : on renvoie ce qu'elle porte, pièces en plus.
+    await this.call(path, {
+      method: "PUT",
+      body: JSON.stringify({
+        paid_on: e.paid_on,
+        currency_code: e.currency_code,
+        exchange_rate: e.exchange_rate ?? undefined,
+        supplier_id: e.supplier_id ?? undefined,
+        document_no: e.document_no,
+        title: e.title ?? undefined,
+        bank_account_id: e.bank_account_id ?? undefined,
+        booking_account_id: e.booking_account_id ?? undefined,
+        amount: e.amount ?? Number(e.gross),
+        tax_id: e.tax_id ?? undefined,
+        base_currency_amount: e.base_currency_amount ?? undefined,
+        attachment_ids: attachments,
+        address: e.address ?? undefined,
+      }),
+    });
   }
 
   private async accountId(accountNo: string): Promise<number> {
@@ -267,6 +405,21 @@ export class UnconfiguredBexioGateway implements IBexioGateway {
     this.fail();
   }
   listTaxes(): Promise<BexioTaxDTO[]> {
+    this.fail();
+  }
+  fileUuid(): Promise<string> {
+    this.fail();
+  }
+  listBankAccounts(): Promise<BexioBankAccount[]> {
+    this.fail();
+  }
+  listExpenses(): Promise<BexioExpense[]> {
+    this.fail();
+  }
+  createExpense(): Promise<string> {
+    this.fail();
+  }
+  attachFilesToExpense(): Promise<void> {
     this.fail();
   }
   createManualEntry(): Promise<string> {

@@ -5,6 +5,7 @@ import type {
   UpdateExpenseDTO,
 } from "../@types/dto/expense.dto.js";
 import type { RevolutImportDTO } from "../@types/dto/revolut.dto.js";
+import type { LinkBexioExpenseDTO } from "../@types/dto/bexioExpense.dto.js";
 import {
   optionalDay,
   optionalId,
@@ -67,3 +68,6 @@ export const revolutImportSchema: ObjectSchema<RevolutImportDTO> = strictObject(
     .required(),
   paymentAccountId: optionalId(),
 });
+
+export const linkBexioExpenseSchema: ObjectSchema<LinkBexioExpenseDTO> =
+  strictObject({ expenseId: string().trim().uuid().required() });

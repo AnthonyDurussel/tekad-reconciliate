@@ -3,6 +3,8 @@ export enum SyncSourceDTO {
   EXTRACTION = "EXTRACTION",
   /** Import d'un relevé Revolut Business (CSV). */
   REVOLUT = "REVOLUT",
+  /** Dépenses de bexio (pièce liée, rapprochement). */
+  BEXIO_EXPENSES = "BEXIO_EXPENSES",
   MATCHING = "MATCHING",
 }
 

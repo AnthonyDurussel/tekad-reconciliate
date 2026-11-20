@@ -34,7 +34,7 @@ export function registerSyncRoutes(app: HttpRouteRegistrar) {
   const post = (
     name: string,
     path: string,
-    action: "bexioInbox" | "extract" | "revolutImport" | "match" | "all",
+    action: "bexioInbox" | "extract" | "bexioExpenses" | "match" | "all",
   ) =>
     route(app, {
       name,
@@ -42,7 +42,7 @@ export function registerSyncRoutes(app: HttpRouteRegistrar) {
       path,
       access: PermissionDTO.SYNC_RUN,
       tx: false,
-      handler: (c, r) => controller(c)[action](r),
+      handler: (c) => controller(c)[action](),
     });
   post("syncBexioInbox", "sync/bexio-inbox", "bexioInbox");
   post("syncExtract", "sync/extract", "extract");
@@ -58,6 +58,7 @@ export function registerSyncRoutes(app: HttpRouteRegistrar) {
     handler: (c, r) => controller(c).revolutImport(r),
   });
   post("syncMatch", "sync/match", "match");
+  post("syncBexioExpenses", "sync/bexio-expenses", "bexioExpenses");
   post("syncAll", "sync/all", "all");
 }
 

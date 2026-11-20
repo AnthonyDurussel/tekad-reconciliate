@@ -39,6 +39,7 @@ export const ExpenseMapper = {
           : undefined,
       booking: expense.booking(ctx),
       bexioEntryId: p.bexioEntryId,
+      bexioExpenseId: p.bexioExpenseId,
       bookedAt: p.bookedAt?.toISOString() ?? null,
       note: p.note,
       ignoreReason: p.ignoreReason,

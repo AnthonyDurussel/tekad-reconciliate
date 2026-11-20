@@ -41,6 +41,10 @@ export class SyncController {
     return ok(await this.useCases.revolutImport(await this.userId(), body));
   }
 
+  async bexioExpenses(): Promise<HttpResponseInit> {
+    return ok(await this.useCases.bexioExpensesSync(await this.userId()));
+  }
+
   async match(): Promise<HttpResponseInit> {
     return ok(await this.useCases.match(await this.userId()));
   }

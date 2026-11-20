@@ -14,6 +14,8 @@ import type { ExpenseUseCases } from "@/expense/application/usecases/ExpenseUseC
 import { EXPENSE_TYPES } from "@/expense/infrastructure/ioc/types.expense.js";
 import type { RevolutUseCases } from "@/revolut/application/usecases/RevolutUseCases.js";
 import { REVOLUT_TYPES } from "@/revolut/infrastructure/ioc/types.revolut.js";
+import type { BexioExpenseUseCases } from "@/bexio-expense/application/BexioExpenseUseCases.js";
+import { BEXIO_EXPENSE_TYPES } from "@/bexio-expense/infrastructure/ioc/types.bexio-expense.js";
 
 /**
  * Les synchronisations, journalisées dans `sync_runs` : inbox bexio →
@@ -27,6 +29,8 @@ export class SyncUseCases {
     @inject(SYNC_TYPES.ISyncRunRepository) private runs: ISyncRunRepository,
     @inject(EXPENSE_TYPES.ExpenseUseCases) private expenses: ExpenseUseCases,
     @inject(REVOLUT_TYPES.RevolutUseCases) private revolut: RevolutUseCases,
+    @inject(BEXIO_EXPENSE_TYPES.BexioExpenseUseCases)
+    private bexioExpenses: BexioExpenseUseCases,
   ) {}
 
   async status(): Promise<SyncStatusDTO> {
@@ -46,6 +50,7 @@ export class SyncUseCases {
   private async configured(source: SyncSourceDTO): Promise<boolean> {
     switch (source) {
       case SyncSourceDTO.BEXIO_INBOX:
+      case SyncSourceDTO.BEXIO_EXPENSES:
         return this.expenses.bexioConfigured;
       case SyncSourceDTO.EXTRACTION:
         return (
@@ -129,6 +134,13 @@ export class SyncUseCases {
     }
   }
 
+  /** Relit les dépenses bexio et lie les pièces jointes. */
+  bexioExpensesSync(userId: string | null) {
+    return this.run(SyncSourceDTO.BEXIO_EXPENSES, userId, () =>
+      this.bexioExpenses.sync(),
+    );
+  }
+
   match(userId: string | null) {
     return this.run(SyncSourceDTO.MATCHING, userId, () =>
       this.expenses.autoMatchAll(),
@@ -143,6 +155,8 @@ export class SyncUseCases {
     if (await this.configured(SyncSourceDTO.EXTRACTION))
       results.push(await this.extract(userId));
     results.push(await this.match(userId));
+    if (await this.configured(SyncSourceDTO.BEXIO_EXPENSES))
+      results.push(await this.bexioExpensesSync(userId));
     return results;
   }
 }

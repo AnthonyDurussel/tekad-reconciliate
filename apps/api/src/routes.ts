@@ -5,6 +5,7 @@ import { registerSettingsRoutes } from "@/settings/index.functions.js";
 import { registerExpenseRoutes } from "@/expense/index.functions.js";
 import { registerRevolutRoutes } from "@/revolut/index.functions.js";
 import { registerSyncRoutes } from "@/sync/index.functions.js";
+import { registerBexioExpenseRoutes } from "@/bexio-expense/index.functions.js";
 import { registerAiRoutes } from "@/ai/index.functions.js";
 import { registerDashboardRoutes } from "@/dashboard/index.functions.js";
 
@@ -18,4 +19,5 @@ export function registerAllRoutes(app: HttpRouteRegistrar): void {
   registerSyncRoutes(app);
   registerDashboardRoutes(app);
   registerAiRoutes(app);
+  registerBexioExpenseRoutes(app);
 }

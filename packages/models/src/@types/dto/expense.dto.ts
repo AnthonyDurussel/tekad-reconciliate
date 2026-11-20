@@ -96,7 +96,10 @@ export interface ExpenseDTO {
   transactionId: string | null;
   transaction?: RevolutTransactionDTO | null;
   booking: BookingProposalDTO;
+  /** Écriture manuelle bexio passée par l'application. */
   bexioEntryId: string | null;
+  /** Dépense bexio (« Ausgabe ») créée par l'application ou liée à la pièce. */
+  bexioExpenseId: string | null;
   bookedAt: string | null;
   note: string | null;
   /** Raison donnée en ignorant la pièce. */

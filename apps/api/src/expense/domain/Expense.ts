@@ -33,6 +33,8 @@ export interface ExpenseProps {
   id: string;
   status: ExpenseStatusDTO;
   bexioFileId: string;
+  /** UUID du fichier bexio (lien des dépenses bexio). */
+  bexioFileUuid: string | null;
   fileName: string;
   mimeType: string | null;
   importedAt: Date;
@@ -61,6 +63,8 @@ export interface ExpenseProps {
 
   transactionId: string | null;
   bexioEntryId: string | null;
+  /** Dépense bexio (« Ausgabe ») créée par l'application ou liée. */
+  bexioExpenseId: string | null;
   bookedAt: Date | null;
   bookedById: string | null;
   note: string | null;
@@ -89,6 +93,7 @@ export class Expense {
   static importFromInbox(input: {
     id: string;
     bexioFileId: string;
+    bexioFileUuid?: string | null;
     fileName: string;
     mimeType: string | null;
     now?: Date;
@@ -97,6 +102,7 @@ export class Expense {
       id: input.id,
       status: ExpenseStatusDTO.NEW,
       bexioFileId: input.bexioFileId,
+      bexioFileUuid: input.bexioFileUuid ?? null,
       fileName: input.fileName,
       mimeType: input.mimeType,
       importedAt: input.now ?? new Date(),
@@ -121,6 +127,7 @@ export class Expense {
       bexioTaxId: null,
       transactionId: null,
       bexioEntryId: null,
+      bexioExpenseId: null,
       bookedAt: null,
       bookedById: null,
       note: null,
@@ -337,14 +344,58 @@ export class Expense {
     entryId: string | null,
     userId: string | null,
     now = new Date(),
+    bexioExpenseId: string | null = null,
   ): void {
     if (this.props.status !== ExpenseStatusDTO.READY) {
       throw new InvalidStateError("seule une pièce prête se comptabilise");
     }
     this.props.status = ExpenseStatusDTO.BOOKED;
     this.props.bexioEntryId = entryId;
+    this.props.bexioExpenseId = bexioExpenseId;
     this.props.bookedAt = now;
     this.props.bookedById = userId;
+  }
+
+  setFileUuid(uuid: string): void {
+    this.props.bexioFileUuid = uuid;
+  }
+
+  /**
+   * La pièce est celle d'une dépense saisie dans bexio : elle y est
+   * comptabilisée, quel que soit son état ici (sauf ignorée).
+   */
+  linkBexioExpense(bexioExpenseId: string, now = new Date()): void {
+    if (this.props.status === ExpenseStatusDTO.IGNORED) {
+      throw new InvalidStateError("pièce ignorée : restaurez-la d'abord");
+    }
+    if (
+      this.props.bexioExpenseId &&
+      this.props.bexioExpenseId !== bexioExpenseId
+    ) {
+      throw new InvalidStateError(
+        "cette pièce est déjà liée à une autre dépense bexio",
+      );
+    }
+    this.props.bexioExpenseId = bexioExpenseId;
+    if (this.props.status !== ExpenseStatusDTO.BOOKED) {
+      this.props.status = ExpenseStatusDTO.BOOKED;
+      this.props.bookedAt = now;
+    }
+  }
+
+  /** La dépense bexio liée a disparu de bexio : la pièce n'y est plus. */
+  unlinkBexioExpense(ctx: ExpenseContext): void {
+    if (!this.props.bexioExpenseId) return;
+    this.props.bexioExpenseId = null;
+    if (
+      this.props.status === ExpenseStatusDTO.BOOKED &&
+      !this.props.bexioEntryId
+    ) {
+      this.props.status = ExpenseStatusDTO.TO_REVIEW;
+      this.props.bookedAt = null;
+      this.props.bookedById = null;
+      this.refresh(ctx);
+    }
   }
 
   /** Rouvre une pièce comptabilisée (l'écriture bexio reste à annuler dans bexio). */
@@ -354,6 +405,7 @@ export class Expense {
     }
     this.props.status = ExpenseStatusDTO.TO_REVIEW;
     this.props.bexioEntryId = null;
+    this.props.bexioExpenseId = null;
     this.props.bookedAt = null;
     this.props.bookedById = null;
     this.refresh(ctx);

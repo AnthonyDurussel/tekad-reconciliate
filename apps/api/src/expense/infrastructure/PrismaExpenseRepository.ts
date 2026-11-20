@@ -21,6 +21,7 @@ const toDomain = (r: Row): Expense =>
     id: r.id,
     status: r.status as ExpenseStatusDTO,
     bexioFileId: r.bexio_file_id,
+    bexioFileUuid: r.bexio_file_uuid,
     fileName: r.file_name,
     mimeType: r.mime_type,
     importedAt: r.imported_at,
@@ -46,6 +47,7 @@ const toDomain = (r: Row): Expense =>
     bexioTaxId: r.bexio_tax_id,
     transactionId: r.transaction?.id ?? null,
     bexioEntryId: r.bexio_entry_id,
+    bexioExpenseId: r.bexio_expense_id,
     bookedAt: r.booked_at,
     bookedById: r.booked_by_id,
     note: r.note,
@@ -57,6 +59,7 @@ const toData = (e: Expense) => {
   return {
     status: p.status,
     bexio_file_id: p.bexioFileId,
+    bexio_file_uuid: p.bexioFileUuid,
     file_name: p.fileName,
     mime_type: p.mimeType,
     imported_at: p.importedAt,
@@ -81,6 +84,7 @@ const toData = (e: Expense) => {
     credit_account_no: p.creditAccountNo,
     bexio_tax_id: p.bexioTaxId,
     bexio_entry_id: p.bexioEntryId,
+    bexio_expense_id: p.bexioExpenseId,
     booked_at: p.bookedAt,
     booked_by_id: p.bookedById,
     note: p.note,
@@ -147,6 +151,33 @@ export class PrismaExpenseRepository implements IExpenseRepository {
       select: { bexio_file_id: true },
     });
     return new Set(rows.map((r) => r.bexio_file_id));
+  }
+
+  async setMissingFileUuids(uuids: Map<string, string>): Promise<void> {
+    for (const [fileId, uuid] of uuids) {
+      await this.prisma.expenseDB.updateMany({
+        where: { bexio_file_id: fileId, bexio_file_uuid: null },
+        data: { bexio_file_uuid: uuid },
+      });
+    }
+  }
+
+  async findByFileUuids(uuids: string[]): Promise<Expense[]> {
+    if (!uuids.length) return [];
+    const rows = await this.prisma.expenseDB.findMany({
+      where: { bexio_file_uuid: { in: uuids } },
+      include,
+    });
+    return rows.map(toDomain);
+  }
+
+  async findByBexioExpenseIds(ids: string[]): Promise<Expense[]> {
+    if (!ids.length) return [];
+    const rows = await this.prisma.expenseDB.findMany({
+      where: { bexio_expense_id: { in: ids } },
+      include,
+    });
+    return rows.map(toDomain);
   }
 
   async listByStatus(statuses: ExpenseStatusDTO[], limit?: number) {

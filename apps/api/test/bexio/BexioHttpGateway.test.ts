@@ -33,7 +33,7 @@ describe("BexioHttpGateway", () => {
     });
     const files = await new BexioHttpGateway("t", undefined, impl).listInboxFiles();
     expect(files).toEqual([
-      { id: "1", name: "ticket.jpg", mimeType: "image/jpeg", createdAt: null },
+      { id: "1", uuid: null, name: "ticket.jpg", mimeType: "image/jpeg", createdAt: null },
     ]);
   });
 
@@ -110,6 +110,34 @@ describe("BexioHttpGateway", () => {
     expect(await gateway.listTaxes()).toEqual([
       { id: 7, code: "VB81", label: "VB81 - 8.1%", rate: 8.1, type: "pre_tax", active: true },
     ]);
+  });
+
+  it("dépenses : pages, création + DONE, pièce jointe sans perdre les autres", async () => {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    const impl = (async (url: string, init: RequestInit = {}) => {
+      const path = url.replace("https://api.bexio.com/", "");
+      calls.push({ url: path, method: init.method ?? "GET", body: typeof init.body === "string" ? JSON.parse(init.body) : undefined });
+      if (path.startsWith("4.0/expenses?")) {
+        const page = Number(/page=(\d+)/.exec(path)![1]);
+        return new Response(JSON.stringify({
+          data: [{ id: `e${page}`, document_no: `AU-${page}`, status: "DONE", lastname_company: "Swisscom", paid_on: "2026-11-02", gross: "89.90", currency_code: "CHF", bank_account_id: 5, attachment_ids: [] }],
+          paging: { page, page_count: 2 },
+        }));
+      }
+      if (path === "4.0/expenses" && init.method === "POST") return new Response(JSON.stringify({ id: "new-uuid" }));
+      if (path === "4.0/expenses/e1" && !init.method) {
+        return new Response(JSON.stringify({ id: "e1", document_no: "AU-1", paid_on: "2026-11-02", currency_code: "CHF", amount: 89.9, gross: 89.9, bank_account_id: 5, booking_account_id: 10, attachment_ids: ["a"] }));
+      }
+      return new Response("{}");
+    }) as typeof fetch;
+    const g = new BexioHttpGateway("t", undefined, impl);
+    const list = await g.listExpenses();
+    expect(list.map((e) => [e.id, e.vendor, e.gross])).toEqual([["e1", "Swisscom", 89.9], ["e2", "Swisscom", 89.9]]);
+    expect(await g.createExpense({ paidOn: "2026-11-02", title: "Swisscom", amountChf: 89.9, bankAccountId: 5, bookingAccountId: 10, taxId: 12, attachmentIds: ["u1"] })).toBe("new-uuid");
+    expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ paid_on: "2026-11-02", amount: 89.9, currency_code: "CHF", bank_account_id: 5, booking_account_id: 10, tax_id: 12, attachment_ids: ["u1"] });
+    expect(calls.some((c) => c.url === "4.0/expenses/new-uuid/bookings/DONE" && c.method === "PUT")).toBe(true);
+    await g.attachFilesToExpense("e1", ["b"]);
+    expect(calls.find((c) => c.url === "4.0/expenses/e1" && c.method === "PUT")?.body).toMatchObject({ attachment_ids: ["a", "b"], amount: 89.9, booking_account_id: 10 });
   });
 
   it("sans jeton : non configuré", () => {

@@ -6,3 +6,4 @@ export * from "./sync.dto.js";
 export * from "./dashboard.dto.js";
 export * from "./aiSettings.dto.js";
 export * from "./bexio.dto.js";
+export * from "./bexioExpense.dto.js";

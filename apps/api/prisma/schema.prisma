@@ -106,13 +106,15 @@ model ExpenseCategoryDB {
 // ===== PIÈCES =====
 /// Pièce comptable importée de l'inbox bexio.
 model ExpenseDB {
-  id            String   @id @default(uuid())
+  id              String   @id @default(uuid())
   /// `ExpenseStatusDTO`
-  status        String   @default("NEW")
-  bexio_file_id String   @unique
-  file_name     String
-  mime_type     String?
-  imported_at   DateTime @default(now())
+  status          String   @default("NEW")
+  bexio_file_id   String   @unique
+  /// UUID du fichier bexio (les dépenses bexio joignent les fichiers par UUID).
+  bexio_file_uuid String?
+  file_name       String
+  mime_type       String?
+  imported_at     DateTime @default(now())
 
   date           DateTime? @db.Date
   merchant       String?
@@ -139,12 +141,14 @@ model ExpenseDB {
   credit_account_no String?
   bexio_tax_id      Int?
 
-  bexio_entry_id String?
-  booked_at      DateTime?
-  booked_by_id   String?
-  note           String?
-  ignore_reason  String?
-  updated_at     DateTime  @updatedAt
+  bexio_entry_id   String?
+  /// Dépense bexio (« Ausgabe ») créée par l'application ou liée à la pièce.
+  bexio_expense_id String?   @unique
+  booked_at        DateTime?
+  booked_by_id     String?
+  note             String?
+  ignore_reason    String?
+  updated_at       DateTime  @updatedAt
 
   payment_account PaymentAccountDB?     @relation(fields: [payment_account_id], references: [id])
   category        ExpenseCategoryDB?    @relation(fields: [category_id], references: [id])
@@ -191,6 +195,34 @@ model RevolutTransactionDB {
   @@unique([revolut_id, leg_id])
   @@index([occurred_at])
   @@map("revolut_transactions")
+}
+
+/// Dépense de bexio (`GET 4.0/expenses`), relue à chaque synchronisation.
+model BexioExpenseDB {
+  /// UUID bexio
+  id                   String    @id
+  document_no          String
+  title                String?
+  vendor               String?
+  /// DRAFT | DONE
+  status               String
+  paid_on              DateTime? @db.Date
+  gross                Decimal   @db.Decimal(14, 2)
+  currency             String
+  booking_account_id   Int?
+  /// Résolus à la synchronisation (plan comptable, comptes bancaires).
+  booking_account_no   String?
+  booking_account_name String?
+  bank_account_id      Int?
+  /// N° du compte du plan comptable du compte bancaire payeur.
+  bank_account_no      String?
+  /// Rapprochée dans bexio : la transaction bancaire.
+  transaction_id       String?
+  attachment_ids       String[]
+  synced_at            DateTime  @default(now())
+
+  @@index([paid_on])
+  @@map("bexio_expenses")
 }
 
 // ===== SYNCHRONISATIONS =====

@@ -38,6 +38,7 @@ Revolut / OpenRouter, `ioc/` bindings), `index.functions.ts` (routes). Use cases
 | `bexio`           | port `IBexioGateway` (inbox files, download, accounts, taxes, manual entries + attachment), adapter `BexioHttpGateway`                     |
 | `extraction`      | port `IReceiptReader`, adapter `OpenRouterReceiptReader` (Mistral OCR `file-parser` plugin + JSON-schema output)                          |
 | `ai`              | AI settings administered in the app (`ai_settings`, like dranse-risque): OpenRouter key sealed, extraction model, OCR engine; `AiRuntime` |
+| `bexio-expense`   | bexio expenses (« Ausgaben », `GET 4.0/expenses`) synced to `bexio_expenses`: receipt linked, reconciliation checked (`checkBexioExpense()`), « Lier une pièce » |
 | `sync`            | orchestration: `SyncUseCases` (inbox → extraction → matching; Revolut statement import + matching), `sync_runs` log, nightly timer        |
 | `dashboard`       | aggregates per status / account / type, missing receipts                                                                                   |
 | `config`          | backend info                                                                                                                               |
@@ -84,10 +85,24 @@ Matching (`scoreMatch()`, `autoMatch()`): amount is mandatory (account amount, o
 receipt currency, ±0.01), date ≤ 5 days, card, merchant similarity; auto-match at ≥ 70 points and
 10 ahead of the next. A transaction belongs to one receipt at most.
 
+Dépenses bexio (`bexio-expense`): `POST sync/bexio-expenses` (also last step of `sync/all`) reads every
+bexio expense, resolves its booking account (chart) and its paying bank account (`3.0/banking/accounts`
+→ chart account → payment account by `bexioAccountNo`), stores them, and links each pièce whose
+file UUID (`expenses.bexio_file_uuid`) is among the expense's `attachment_ids` (`Expense.linkBexioExpense`
+→ BOOKED); a pièce linked to an expense gone from bexio is unlinked. `checkBexioExpense()` flags
+`MISSING_RECEIPT` (no attachment, no linked pièce), `NOT_RECONCILED` (account `BEXIO`: no bexio
+`transaction_id`; account `STATEMENT_IMPORT`: linked pièce without statement transaction and no bexio
+`transaction_id`; `NONE`: not required), `UNKNOWN_ACCOUNT`, `DRAFT`. `POST bexio-expenses/{id}/link`
+attaches the pièce's file to the bexio expense (`PUT 4.0/expenses/{id}` with all its fields +
+`attachment_ids`) and links it; one pièce per bexio expense.
+
 Booking (`bookingProposal()`): debit = override ?? type account, credit = override ?? payment
 account's bexio account, tax = override ?? type's; amount CHF = Revolut debited amount, else the
-receipt amount if CHF. `POST expenses/{id}/book` on a `READY` receipt: `MANUAL_ENTRY` → bexio
-manual entry + receipt attached, `bexioEntryId` kept; `BEXIO_RECONCILIATION` → marked booked (done
+receipt amount if CHF. `POST expenses/{id}/book` on a `READY` receipt: `MANUAL_ENTRY` → when the
+credited account is a bexio **bank account**, a bexio **expense** (`POST 4.0/expenses` with the pièce's
+file UUID in `attachment_ids`, bank and booking account, tax, then `PUT …/bookings/DONE`;
+`bexioExpenseId` kept), otherwise (compte courant…) a bexio manual entry + receipt attached
+(`bexioEntryId` kept); `BEXIO_RECONCILIATION` → marked booked (done
 in bexio).
 
 ## Roles & permissions
@@ -124,18 +139,20 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `POST expenses/{id}/book`, `/unbook`                                                         | `EXPENSE_BOOK`                     | → `ExpenseDTO`; 409 unless READY (book) / BOOKED (unbook)         |
 | `GET revolut/transactions?from&to&filter&search`                                             | `EXPENSE_VIEW`                     | `RevolutTransactionDTO[]`; `filter=missing` = receipts to ask for |
 | `POST revolut/transactions/{id}/ignore`, `/restore`                                          | `EXPENSE_MANAGE`                   | `IgnoreDTO` → `RevolutTransactionDTO`                             |
+| `GET bexio-expenses?from&to&paymentAccountId&issue&search`                                  | `EXPENSE_VIEW`                     | `BexioExpenseDTO[]` (`issue` = a `BexioExpenseIssueDTO` or `ok`)  |
+| `POST bexio-expenses/{id}/link`, `/unlink`                                                   | `EXPENSE_MANAGE`                   | `LinkBexioExpenseDTO` → `BexioExpenseDTO`                         |
 | `GET dashboard?from&to`                                                                      | `EXPENSE_VIEW`                     | `DashboardDTO`                                                    |
 | `GET sync/status`, `GET sync/runs`                                                           | `EXPENSE_VIEW`                     | `SyncStatusDTO` / `SyncRunDTO[]` (50 last)                        |
 | `GET/PUT/DELETE ai/settings`, `POST ai/settings/models`, `POST ai/settings/test`              | `SETTINGS_MANAGE`                  | `AiSettingsDTO` / `UpdateAiSettingsDTO` (`apiKey` absent keeps the stored one) / back to env; `AiConnectionDTO` → `AiModelDTO[]` / `AiConnectionTestDTO` |
 | `POST revolut/import`                                                                        | `SYNC_RUN`                         | `RevolutImportDTO` (CSV text, ≤ 10 MB) → `RevolutImportResultDTO`; 400 if unreadable |
-| `POST sync/bexio-inbox`, `POST sync/extract`, `POST sync/match`, `POST sync/all`             | `SYNC_RUN`                         | → `SyncRunDTO` (`sync/all` → `SyncRunDTO[]`); 409 if not configured |
+| `POST sync/bexio-inbox`, `POST sync/extract`, `POST sync/match`, `POST sync/bexio-expenses`, `POST sync/all`             | `SYNC_RUN`                         | → `SyncRunDTO` (`sync/all` → `SyncRunDTO[]`); 409 if not configured |
 
 Timer `nightlySync` (05:15 UTC, `SYNC_CRON` overrides): `sync/all` when configured.
 
 ## Configuration (app settings / `local.settings.json`)
 
 - `DATABASE_URL` (local) / `DATABASE_ENTRA_URL` (Azure).
-- bexio: `BEXIO_API_TOKEN` (personal access token, scopes: `file`, `accounting`, `kb_*` read), `BEXIO_API_URL` (default `https://api.bexio.com`).
+- bexio: `BEXIO_API_TOKEN` (personal access token, scopes: `file`, `accounting`, `kb_expense_show` + expense write, `bank_account_show`, `kb_*` read), `BEXIO_API_URL` (default `https://api.bexio.com`).
 - Revolut: nothing — the statement is uploaded (`POST revolut/import`).
 - AI: set in the app (« Intelligence artificielle », `SETTINGS_MANAGE`) — OpenRouter API key (sealed AES-256-GCM with `SETTINGS_ENCRYPTION_KEY` ≥ 32 chars, hint `…abcd` only, never returned), extraction model (catalogue `GET /models` listed by the screen, « JSON » badge = structured outputs), OCR engine (`mistral-ocr` default, `pdf-text`, `native`), test call. `AiRuntime` resolves stored row (disabled or unreadable key → AI off) › env `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` / `OPENROUTER_OCR_ENGINE`; cached 30 s, invalidated on save.
 

@@ -17,6 +17,10 @@ export interface IExpenseRepository {
   findById(id: string): Promise<Expense | null>;
   /** Identifiants bexio déjà importés parmi ceux donnés. */
   existingFileIds(fileIds: string[]): Promise<Set<string>>;
+  /** Renseigne l'UUID bexio des pièces importées avant qu'on le garde. */
+  setMissingFileUuids(uuids: Map<string, string>): Promise<void>;
+  findByFileUuids(uuids: string[]): Promise<Expense[]>;
+  findByBexioExpenseIds(ids: string[]): Promise<Expense[]>;
   listByStatus(
     statuses: ExpenseStatusDTO[],
     limit?: number,
