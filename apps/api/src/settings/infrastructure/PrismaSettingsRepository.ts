@@ -1,6 +1,11 @@
 import { inject, injectable } from "inversify";
 import type { PrismaClient } from "@generated/prisma/client.js";
-import { BookingModeDTO, PaymentAccountKindDTO } from "@repo/models";
+import {
+  BookingModeDTO,
+  PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
+} from "@repo/models";
 import { ConflictError } from "@/shared/domain/errors.js";
 import { toNumber } from "@/shared/infrastructure/decimal.js";
 import type { PaymentAccountProps } from "@/settings/domain/PaymentAccount.js";
@@ -20,6 +25,8 @@ type AccountRow = {
   kind: string;
   name: string;
   bexio_account_no: string | null;
+  reconciliation: string;
+  statement_format: string | null;
   booking_mode: string;
   revolut_account_id: string | null;
   position: number;
@@ -39,6 +46,8 @@ export const toPaymentAccount = (row: AccountRow): PaymentAccountProps => ({
   kind: row.kind as PaymentAccountKindDTO,
   name: row.name,
   bexioAccountNo: row.bexio_account_no,
+  reconciliation: row.reconciliation as ReconciliationModeDTO,
+  statementFormat: row.statement_format as StatementFormatDTO | null,
   bookingMode: row.booking_mode as BookingModeDTO,
   revolutAccountId: row.revolut_account_id,
   position: row.position,
@@ -115,6 +124,8 @@ export class PrismaSettingsRepository implements ISettingsRepository {
       kind: account.kind,
       name: account.name,
       bexio_account_no: account.bexioAccountNo,
+      reconciliation: account.reconciliation,
+      statement_format: account.statementFormat,
       booking_mode: account.bookingMode,
       revolut_account_id: account.revolutAccountId,
       position: account.position,

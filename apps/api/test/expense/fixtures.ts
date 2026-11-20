@@ -1,6 +1,8 @@
 import {
   BookingModeDTO,
   PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
   type ExtractionDTO,
 } from "@repo/models";
 import type { PaymentAccountProps } from "@/settings/domain/PaymentAccount.js";
@@ -12,6 +14,8 @@ export const revolut: PaymentAccountProps = {
   kind: PaymentAccountKindDTO.REVOLUT,
   name: "Revolut Business",
   bexioAccountNo: "1021",
+  reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
+  statementFormat: StatementFormatDTO.REVOLUT_BUSINESS,
   bookingMode: BookingModeDTO.MANUAL_ENTRY,
   revolutAccountId: "rev-chf",
   position: 0,
@@ -24,6 +28,8 @@ export const ubs: PaymentAccountProps = {
   kind: PaymentAccountKindDTO.UBS,
   name: "UBS",
   bexioAccountNo: "1020",
+  reconciliation: ReconciliationModeDTO.BEXIO,
+  statementFormat: null,
   bookingMode: BookingModeDTO.BEXIO_RECONCILIATION,
   revolutAccountId: null,
   position: 1,
@@ -36,6 +42,8 @@ export const personal: PaymentAccountProps = {
   kind: PaymentAccountKindDTO.PERSONAL,
   name: "Compte courant Anthony",
   bexioAccountNo: "2210",
+  reconciliation: ReconciliationModeDTO.NONE,
+  statementFormat: null,
   bookingMode: BookingModeDTO.MANUAL_ENTRY,
   revolutAccountId: null,
   position: 2,

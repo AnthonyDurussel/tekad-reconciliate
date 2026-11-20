@@ -2,6 +2,8 @@ import { array, boolean, mixed, number, string, type ObjectSchema } from "yup";
 import {
   BookingModeDTO,
   PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
   type CreateExpenseCategoryDTO,
   type CreatePaymentAccountDTO,
   type PaymentCardDTO,
@@ -39,6 +41,13 @@ const accountShape = {
   kind: mixed<PaymentAccountKindDTO>().oneOf(Object.values(PaymentAccountKindDTO)),
   name: requiredLabel(),
   bexioAccountNo: accountNo().nullable().optional(),
+  reconciliation: mixed<ReconciliationModeDTO>()
+    .oneOf(Object.values(ReconciliationModeDTO))
+    .optional(),
+  statementFormat: mixed<StatementFormatDTO>()
+    .oneOf(Object.values(StatementFormatDTO))
+    .nullable()
+    .optional(),
   bookingMode: mixed<BookingModeDTO>()
     .oneOf(Object.values(BookingModeDTO))
     .optional(),

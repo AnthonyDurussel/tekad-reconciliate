@@ -17,7 +17,9 @@ import {
   BookingModeDTO,
   ExpenseStatusDTO,
   PaymentAccountKindDTO,
+  ReconciliationModeDTO,
   RoleDTO,
+  StatementFormatDTO,
 } from "@repo/models";
 import { prisma } from "@/shared/infrastructure/prismaClient.js";
 
@@ -26,18 +28,22 @@ const ACCOUNTS = [
     kind: PaymentAccountKindDTO.REVOLUT,
     name: "Revolut Business",
     bexio_account_no: "1021",
+    reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
+    statement_format: StatementFormatDTO.REVOLUT_BUSINESS,
     booking_mode: BookingModeDTO.MANUAL_ENTRY,
   },
   {
     kind: PaymentAccountKindDTO.UBS,
     name: "UBS",
     bexio_account_no: "1020",
+    reconciliation: ReconciliationModeDTO.BEXIO,
     booking_mode: BookingModeDTO.BEXIO_RECONCILIATION,
   },
   {
     kind: PaymentAccountKindDTO.PERSONAL,
     name: "Compte courant Anthony",
     bexio_account_no: "2210",
+    reconciliation: ReconciliationModeDTO.NONE,
     booking_mode: BookingModeDTO.MANUAL_ENTRY,
   },
 ];

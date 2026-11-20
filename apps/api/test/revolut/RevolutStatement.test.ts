@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PaymentAccountKindDTO } from "@repo/models";
+import { PaymentAccountKindDTO, StatementFormatDTO } from "@repo/models";
 import {
   parseAmount,
   parseCsv,
@@ -78,6 +78,31 @@ describe("parseRevolutStatement", () => {
   });
 });
 
+describe("relevé Revolut personnel", () => {
+  const PERSONAL = [
+    "Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance",
+    "CARD_PAYMENT,Current,2026-11-02 10:12:00,2026-11-03 08:00:00,Migros,-42.50,0.00,CHF,COMPLETED,120.00",
+    "TOPUP,Current,2026-11-01 09:00:00,2026-11-01 09:00:00,Top-up by *1234,200.00,0.00,CHF,COMPLETED,162.50",
+    "CARD_PAYMENT,Current,2026-11-04 12:00:00,2026-11-05 08:00:00,Amazon,-20.00,0.50,EUR,COMPLETED,10.00",
+  ].join("\n");
+
+  it("lit le format personnel (frais à part, sans ID)", () => {
+    const { rows, errors } = parseRevolutStatement(PERSONAL, StatementFormatDTO.REVOLUT_PERSONAL);
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => [r.type, r.amount, r.currency, r.requiresReceipt])).toEqual([
+      ["card_payment", -42.5, "CHF", true],
+      ["topup", 200, "CHF", false],
+      ["card_payment", -20.5, "EUR", true],
+    ]);
+    expect(rows[0].revolutAccountId).toBe("Current CHF");
+    expect(rows[0].revolutId).toMatch(/^csv-/);
+  });
+
+  it("refuse un relevé personnel importé comme Business", () => {
+    expect(parseRevolutStatement(PERSONAL).errors[0]).toMatch(/Revolut Business/);
+  });
+});
+
 describe("formats", () => {
   it.each([
     ["-10.70", -10.7],
@@ -149,8 +174,20 @@ describe("RevolutUseCases.importStatement", () => {
       second,
       { ...ubs, kind: PaymentAccountKindDTO.UBS },
     ]);
-    await useCases.importStatement(STATEMENT, null);
+    // Deux comptes importés : il faut choisir ; « CHF Main » va à son compte.
+    await expect(useCases.importStatement(STATEMENT, null)).rejects.toThrow(/choisissez le compte/);
+    const result = await useCases.importStatement(STATEMENT, second.id);
+    expect(result).toMatchObject({ paymentAccountId: second.id, format: "REVOLUT_BUSINESS" });
     expect(stored.every((r) => r.paymentAccountId === revolut.id)).toBe(true);
+  });
+
+  it("refuse un compte rapproché dans bexio, ou un relevé d'un autre format", async () => {
+    const { useCases } = setup([revolut, ubs]);
+    await expect(useCases.importStatement(STATEMENT, ubs.id)).rejects.toThrow(/n'est pas rapproché par import/);
+    const personal = setup([{ ...revolut, statementFormat: StatementFormatDTO.REVOLUT_PERSONAL }]);
+    await expect(personal.useCases.importStatement(STATEMENT, null)).rejects.toThrow(
+      /ne ressemble pas à un relevé Revolut \(compte personnel\)/,
+    );
   });
 
   it("ajoute au compte Revolut les cartes inconnues du relevé", async () => {

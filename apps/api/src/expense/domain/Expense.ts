@@ -4,7 +4,7 @@ import {
   categoryByRules,
   expenseStatus,
   ExpenseStatusDTO,
-  PaymentAccountKindDTO,
+  ReconciliationModeDTO,
   SuggestionSourceDTO,
   type BookingProposalDTO,
   type ExtractionDTO,
@@ -301,14 +301,15 @@ export class Expense {
     return ctx.categories.find((c) => c.id === this.props.categoryId) ?? null;
   }
 
-  /** Une pièce Revolut ou de compte inconnu peut chercher sa transaction. */
+  /** Une pièce d'un compte importé, ou de compte inconnu, cherche sa transaction. */
   canMatchRevolut(ctx: Pick<ExpenseContext, "accounts">): boolean {
     const account = this.account(ctx);
     return (
       !this.props.transactionId &&
       this.props.status !== ExpenseStatusDTO.BOOKED &&
       this.props.status !== ExpenseStatusDTO.IGNORED &&
-      (!account || account.kind === PaymentAccountKindDTO.REVOLUT)
+      (!account ||
+        account.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT)
     );
   }
 

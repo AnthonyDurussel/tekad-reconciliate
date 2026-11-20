@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   BexioAccountTypeDTO,
+  BookingModeDTO,
   PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
   type BexioAccountDTO,
 } from "@repo/models";
 import { ValidationError } from "@/shared/domain/errors.js";
@@ -105,6 +108,25 @@ describe("SettingsUseCases — plan comptable bexio", () => {
     await expect(useCases.syncCategoriesFromBexio()).rejects.toThrow(/pas configuré/);
     const cat = await useCases.createCategory({ code: "6570", label: "IT", bexioAccountNo: "6570" });
     expect(cat.bexioAccountId).toBeNull();
+  });
+
+  it("rapprochement : par défaut selon la nature, format exigé pour l'import", async () => {
+    const { useCases } = setup(false);
+    const ubsAccount = await useCases.createPaymentAccount({ kind: PaymentAccountKindDTO.UBS, name: "UBS" });
+    expect(ubsAccount).toMatchObject({ reconciliation: "BEXIO", bookingMode: "BEXIO_RECONCILIATION", statementFormat: null });
+    const rev = await useCases.createPaymentAccount({ kind: PaymentAccountKindDTO.REVOLUT, name: "Revolut" });
+    expect(rev).toMatchObject({ reconciliation: "STATEMENT_IMPORT", statementFormat: "REVOLUT_BUSINESS", bookingMode: "MANUAL_ENTRY" });
+    // N'importe quel compte peut être importé, dans le format choisi.
+    const other = await useCases.createPaymentAccount({
+      kind: PaymentAccountKindDTO.OTHER,
+      name: "Revolut perso",
+      reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
+      statementFormat: StatementFormatDTO.REVOLUT_PERSONAL,
+    });
+    expect(other.statementFormat).toBe("REVOLUT_PERSONAL");
+    // Repassé dans bexio : plus de format ; l'ancien champ bookingMode se traduit.
+    const moved = await useCases.updatePaymentAccount(other.id, { bookingMode: BookingModeDTO.BEXIO_RECONCILIATION });
+    expect(moved).toMatchObject({ reconciliation: "BEXIO", statementFormat: null });
   });
 
   it("carte saisie en entier : seuls la forme masquée et les 4 derniers chiffres restent", async () => {

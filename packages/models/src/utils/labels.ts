@@ -2,6 +2,8 @@ import { RoleDTO } from "../@types/authorization.js";
 import {
   BookingModeDTO,
   PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
 } from "../@types/dto/settings.dto.js";
 import { ExpenseStatusDTO } from "../@types/dto/expense.dto.js";
 
@@ -13,8 +15,8 @@ export const ROLE_LABELS: Record<RoleDTO, string> = {
 };
 
 export const PAYMENT_ACCOUNT_KIND_LABELS: Record<PaymentAccountKindDTO, string> = {
-  [PaymentAccountKindDTO.REVOLUT]: "Revolut Business",
-  [PaymentAccountKindDTO.UBS]: "UBS",
+  [PaymentAccountKindDTO.REVOLUT]: "Revolut",
+  [PaymentAccountKindDTO.UBS]: "Banque",
   [PaymentAccountKindDTO.PERSONAL]: "Compte courant associé",
   [PaymentAccountKindDTO.OTHER]: "Autre",
 };
@@ -30,4 +32,15 @@ export const EXPENSE_STATUS_LABELS: Record<ExpenseStatusDTO, string> = {
   [ExpenseStatusDTO.READY]: "Prête",
   [ExpenseStatusDTO.BOOKED]: "Comptabilisée",
   [ExpenseStatusDTO.IGNORED]: "Ignorée",
+};
+
+export const RECONCILIATION_MODE_LABELS: Record<ReconciliationModeDTO, string> = {
+  [ReconciliationModeDTO.BEXIO]: "Rapprochement dans bexio",
+  [ReconciliationModeDTO.STATEMENT_IMPORT]: "Import du relevé CSV",
+  [ReconciliationModeDTO.NONE]: "Sans relevé",
+};
+
+export const STATEMENT_FORMAT_LABELS: Record<StatementFormatDTO, string> = {
+  [StatementFormatDTO.REVOLUT_BUSINESS]: "Revolut Business",
+  [StatementFormatDTO.REVOLUT_PERSONAL]: "Revolut (compte personnel)",
 };

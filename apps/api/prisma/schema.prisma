@@ -45,7 +45,11 @@ model PaymentAccountDB {
   name               String   @unique
   /// Compte bexio crédité (1021, 1020, 2210…).
   bexio_account_no   String?
-  /// `BookingModeDTO`
+  /// `ReconciliationModeDTO` : BEXIO | STATEMENT_IMPORT | NONE
+  reconciliation     String   @default("NONE")
+  /// `StatementFormatDTO` (import seulement)
+  statement_format   String?
+  /// `BookingModeDTO`, découle de `reconciliation`
   booking_mode       String   @default("MANUAL_ENTRY")
   /// `account_id` Revolut des transactions de ce compte.
   revolut_account_id String?  @unique

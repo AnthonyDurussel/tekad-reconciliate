@@ -10,7 +10,7 @@ import {
   ExpenseStatusDTO,
   last4OfMasked,
   merchantSimilarity,
-  PaymentAccountKindDTO,
+  ReconciliationModeDTO,
   requiresReceipt,
   scoreMatch,
 } from "../src/index.js";
@@ -148,7 +148,7 @@ describe("scoreMatch / autoMatch", () => {
 
 describe("expenseStatus / bookingProposal", () => {
   const revolut = {
-    kind: PaymentAccountKindDTO.REVOLUT,
+    reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
     bexioAccountNo: "1021",
     bookingMode: BookingModeDTO.MANUAL_ENTRY,
   };
@@ -163,13 +163,13 @@ describe("expenseStatus / bookingProposal", () => {
     transactionId: null,
   };
 
-  it("Revolut sans transaction reste à compléter", () => {
+  it("compte importé sans transaction : à compléter", () => {
     expect(expenseStatus(base)).toBe(ExpenseStatusDTO.TO_REVIEW);
     expect(expenseStatus({ ...base, transactionId: "t" })).toBe(ExpenseStatusDTO.READY);
   });
-  it("UBS : prête sans transaction", () => {
+  it("rapproché dans bexio : prête sans transaction", () => {
     expect(
-      expenseStatus({ ...base, paymentAccount: { kind: PaymentAccountKindDTO.UBS } }),
+      expenseStatus({ ...base, paymentAccount: { reconciliation: ReconciliationModeDTO.BEXIO } }),
     ).toBe(ExpenseStatusDTO.READY);
   });
   it("garde BOOKED, NEW tant que non lue", () => {
@@ -209,7 +209,7 @@ describe("expenseStatus / bookingProposal", () => {
       totalAmount: 100,
       currency: "EUR",
       transactionAmountChf: null,
-      paymentAccount: { ...revolut, kind: PaymentAccountKindDTO.PERSONAL, bexioAccountNo: "2210" },
+      paymentAccount: { ...revolut, reconciliation: ReconciliationModeDTO.NONE, bexioAccountNo: "2210" },
       category,
       debitAccountNo: "6640",
       creditAccountNo: null,

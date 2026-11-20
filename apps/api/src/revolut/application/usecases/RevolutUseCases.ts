@@ -1,6 +1,7 @@
 import { inject, injectable } from "inversify";
 import {
-  PaymentAccountKindDTO,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
   normalizeText,
   type RevolutImportResultDTO,
 } from "@repo/models";
@@ -59,39 +60,56 @@ export class RevolutUseCases {
   }
 
   /**
-   * Importe un relevé Revolut Business (CSV). Une ligne déjà importée (même
-   * ID, même compte) est mise à jour — un relevé peut se réimporter, ou
-   * chevaucher le précédent. Chaque ligne va au compte de paiement dont le
-   * « Compte Revolut » porte le nom de sa colonne « Account », sinon au
-   * compte choisi, sinon au seul compte Revolut actif.
+   * Importe le relevé CSV d'un compte rapproché par import, dans le format
+   * réglé sur ce compte. Une ligne déjà importée (même ID, même compte) est
+   * mise à jour — un relevé peut se réimporter, ou chevaucher le précédent.
+   * Une ligne dont la colonne « Account » nomme un autre compte importé va
+   * à celui-ci (relevé Revolut Business multi-comptes), les autres au compte
+   * choisi (défaut : le seul compte importé).
    */
   async importStatement(
     content: string,
     paymentAccountId: string | null,
   ): Promise<StatementImport> {
-    const { rows, errors, cards } = parseRevolutStatement(content);
-    if (!rows.length) {
-      throw new ValidationError(errors[0] ?? "aucune transaction lisible");
-    }
     const accounts = (await this.settings.listPaymentAccounts()).filter(
       (a) => a.active,
     );
-    if (paymentAccountId && !accounts.some((a) => a.id === paymentAccountId)) {
+    const imported = accounts.filter(
+      (a) => a.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT,
+    );
+    let target = paymentAccountId
+      ? accounts.find((a) => a.id === paymentAccountId)
+      : imported.length === 1
+        ? imported[0]
+        : undefined;
+    if (paymentAccountId && !target) {
       throw new ValidationError("compte de paiement inconnu ou inactif");
     }
-    const revolutAccounts = accounts.filter(
-      (a) => a.kind === PaymentAccountKindDTO.REVOLUT,
-    );
-    const fallback =
-      paymentAccountId ??
-      (revolutAccounts.length === 1 ? revolutAccounts[0].id : null);
+    if (!target) {
+      throw new ValidationError(
+        imported.length
+          ? "choisissez le compte dont c'est le relevé"
+          : "aucun compte n'est rapproché par import de relevé (Comptes et cartes)",
+      );
+    }
+    if (target.reconciliation !== ReconciliationModeDTO.STATEMENT_IMPORT) {
+      throw new ValidationError(
+        `« ${target.name} » n'est pas rapproché par import de relevé`,
+      );
+    }
+    const format =
+      target.statementFormat ?? StatementFormatDTO.REVOLUT_BUSINESS;
+    const { rows, errors, cards } = parseRevolutStatement(content, format);
+    if (!rows.length) {
+      throw new ValidationError(errors[0] ?? "aucune transaction lisible");
+    }
     const byName = new Map(
-      accounts
+      imported
         .filter((a) => a.revolutAccountId)
         .map((a) => [normalizeText(a.revolutAccountId), a.id]),
     );
     const accountOf = (revolutAccountId: string) =>
-      byName.get(normalizeText(revolutAccountId)) ?? fallback;
+      byName.get(normalizeText(revolutAccountId)) ?? target.id;
     const { created, updated } = await this.transactions.upsertMany(
       rows.map((r) => ({
         ...r,
@@ -110,11 +128,14 @@ export class RevolutUseCases {
       from: days[0] ?? null,
       to: days[days.length - 1] ?? null,
       cardsAdded,
+      paymentAccountId: target.id,
+      paymentAccountName: target.name,
+      format,
     };
   }
 
   /**
-   * Les cartes du relevé encore inconnues rejoignent leur compte Revolut
+   * Les cartes du relevé encore inconnues rejoignent leur compte importé
    * (forme masquée et libellé de Revolut) : les tickets payés avec elles
    * seront classés sur ce compte. Une carte déjà connue — sur n'importe quel
    * compte — n'est pas touchée.
@@ -132,7 +153,11 @@ export class RevolutUseCases {
       const account = accounts.find(
         (a) => a.id === accountOf(card.revolutAccountId),
       );
-      if (!account || account.kind !== PaymentAccountKindDTO.REVOLUT) continue;
+      if (
+        !account ||
+        account.reconciliation !== ReconciliationModeDTO.STATEMENT_IMPORT
+      )
+        continue;
       const { expenseCount: _count, ...plain } = account;
       plain.cards = [
         ...plain.cards,

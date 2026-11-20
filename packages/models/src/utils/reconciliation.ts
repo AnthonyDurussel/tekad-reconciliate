@@ -5,7 +5,7 @@
  */
 import {
   BookingModeDTO,
-  PaymentAccountKindDTO,
+  ReconciliationModeDTO,
 } from "../@types/dto/settings.dto.js";
 import {
   ExpenseStatusDTO,
@@ -310,12 +310,15 @@ export interface StatusInput {
   extracted: boolean;
   date: string | null;
   totalAmount: number | null;
-  paymentAccount: { kind: PaymentAccountKindDTO } | null;
+  paymentAccount: { reconciliation: ReconciliationModeDTO } | null;
   hasCategory: boolean;
   transactionId: string | null;
 }
 
-/** Ce qui manque à une pièce pour être comptabilisée (codes stables). */
+/**
+ * Ce qui manque à une pièce pour être comptabilisée (codes stables). Un
+ * compte rapproché par import de relevé exige la transaction de la pièce.
+ */
 export function missingForBooking(input: Omit<StatusInput, "status" | "extracted">): string[] {
   const missing: string[] = [];
   if (!input.date) missing.push("date");
@@ -323,7 +326,8 @@ export function missingForBooking(input: Omit<StatusInput, "status" | "extracted
   if (!input.paymentAccount) missing.push("paymentAccount");
   if (!input.hasCategory) missing.push("category");
   if (
-    input.paymentAccount?.kind === PaymentAccountKindDTO.REVOLUT &&
+    input.paymentAccount?.reconciliation ===
+      ReconciliationModeDTO.STATEMENT_IMPORT &&
     !input.transactionId
   ) {
     missing.push("transaction");
@@ -354,7 +358,7 @@ export interface BookingInput {
   /** Montant débité du compte Revolut, en CHF. */
   transactionAmountChf: number | null;
   paymentAccount: {
-    kind: PaymentAccountKindDTO;
+    reconciliation: ReconciliationModeDTO;
     bexioAccountNo: string | null;
     bookingMode: BookingModeDTO;
   } | null;

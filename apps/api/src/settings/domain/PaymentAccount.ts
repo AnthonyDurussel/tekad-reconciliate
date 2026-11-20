@@ -1,5 +1,8 @@
 import {
   maskCardNumber,
+  bookingModeFor,
+  ReconciliationModeDTO,
+  StatementFormatDTO,
   BookingModeDTO,
   PaymentAccountKindDTO,
   type CreatePaymentAccountDTO,
@@ -23,20 +26,56 @@ export interface PaymentAccountProps {
   kind: PaymentAccountKindDTO;
   name: string;
   bexioAccountNo: string | null;
+  reconciliation: ReconciliationModeDTO;
+  statementFormat: StatementFormatDTO | null;
+  /** Découle de `reconciliation`. */
   bookingMode: BookingModeDTO;
+  /** Nom du compte dans un relevé multi-comptes (colonne « Account »). */
   revolutAccountId: string | null;
   position: number;
   active: boolean;
   cards: PaymentCard[];
 }
 
-/** UBS se rapproche dans bexio ; les autres comptes passent par l'application. */
-export function defaultBookingMode(
-  kind: PaymentAccountKindDTO,
-): BookingModeDTO {
-  return kind === PaymentAccountKindDTO.UBS
-    ? BookingModeDTO.BEXIO_RECONCILIATION
-    : BookingModeDTO.MANUAL_ENTRY;
+/**
+ * Rapprochement proposé à la création selon la nature du compte : une
+ * banque dans bexio, Revolut par son relevé, le reste sans relevé.
+ */
+export function defaultReconciliation(kind: PaymentAccountKindDTO): {
+  reconciliation: ReconciliationModeDTO;
+  statementFormat: StatementFormatDTO | null;
+} {
+  if (kind === PaymentAccountKindDTO.UBS) {
+    return {
+      reconciliation: ReconciliationModeDTO.BEXIO,
+      statementFormat: null,
+    };
+  }
+  if (kind === PaymentAccountKindDTO.REVOLUT) {
+    return {
+      reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
+      statementFormat: StatementFormatDTO.REVOLUT_BUSINESS,
+    };
+  }
+  return { reconciliation: ReconciliationModeDTO.NONE, statementFormat: null };
+}
+
+/** L'ancien champ `bookingMode` seul (sans `reconciliation`) se traduit encore. */
+function reconciliationFrom(
+  input: CreatePaymentAccountDTO | UpdatePaymentAccountDTO,
+  fallback: ReconciliationModeDTO,
+): ReconciliationModeDTO {
+  if (input.reconciliation) return input.reconciliation;
+  if (input.bookingMode === BookingModeDTO.BEXIO_RECONCILIATION) {
+    return ReconciliationModeDTO.BEXIO;
+  }
+  if (
+    input.bookingMode === BookingModeDTO.MANUAL_ENTRY &&
+    fallback === ReconciliationModeDTO.BEXIO
+  ) {
+    return ReconciliationModeDTO.NONE;
+  }
+  return fallback;
 }
 
 function toCards(
@@ -63,17 +102,20 @@ function toCards(
   });
 }
 
+/** Cohérence : un compte importé a son format ; les autres n'en ont pas. */
 function check(account: PaymentAccountProps): PaymentAccountProps {
   if (!account.name.trim()) throw new ValidationError("le nom est requis");
-  if (
-    account.revolutAccountId &&
-    account.kind !== PaymentAccountKindDTO.REVOLUT
-  ) {
-    throw new ValidationError(
-      "seul un compte Revolut porte un identifiant de compte Revolut",
-    );
+  const imported =
+    account.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT;
+  if (imported && !account.statementFormat) {
+    throw new ValidationError("choisissez le format du relevé importé");
   }
-  return account;
+  return {
+    ...account,
+    statementFormat: imported ? account.statementFormat : null,
+    revolutAccountId: imported ? account.revolutAccountId : null,
+    bookingMode: bookingModeFor(account.reconciliation),
+  };
 }
 
 export function createPaymentAccount(
@@ -81,12 +123,20 @@ export function createPaymentAccount(
   input: CreatePaymentAccountDTO,
   newId: () => string,
 ): PaymentAccountProps {
+  const defaults = defaultReconciliation(input.kind);
+  const reconciliation = reconciliationFrom(input, defaults.reconciliation);
   return check({
     id,
     kind: input.kind,
     name: input.name.trim(),
     bexioAccountNo: input.bexioAccountNo ?? null,
-    bookingMode: input.bookingMode ?? defaultBookingMode(input.kind),
+    reconciliation,
+    statementFormat:
+      input.statementFormat ??
+      (reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT
+        ? (defaults.statementFormat ?? StatementFormatDTO.REVOLUT_BUSINESS)
+        : null),
+    bookingMode: bookingModeFor(reconciliation),
     revolutAccountId: input.revolutAccountId?.trim() || null,
     position: input.position ?? 0,
     active: input.active ?? true,
@@ -99,15 +149,24 @@ export function patchPaymentAccount(
   input: UpdatePaymentAccountDTO,
   newId: () => string,
 ): PaymentAccountProps {
+  const reconciliation = reconciliationFrom(input, current.reconciliation);
   return check({
     ...current,
     kind: input.kind ?? current.kind,
+    reconciliation,
+    statementFormat:
+      input.statementFormat !== undefined
+        ? input.statementFormat
+        : (current.statementFormat ??
+          (reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT
+            ? StatementFormatDTO.REVOLUT_BUSINESS
+            : null)),
     name: input.name?.trim() ?? current.name,
     bexioAccountNo:
       input.bexioAccountNo !== undefined
         ? input.bexioAccountNo
         : current.bexioAccountNo,
-    bookingMode: input.bookingMode ?? current.bookingMode,
+    bookingMode: bookingModeFor(reconciliation),
     revolutAccountId:
       input.revolutAccountId !== undefined
         ? input.revolutAccountId?.trim() || null

@@ -27,6 +27,8 @@ export const paymentAccountDTO = (
   kind: a.kind,
   name: a.name,
   bexioAccountNo: a.bexioAccountNo,
+  reconciliation: a.reconciliation,
+  statementFormat: a.statementFormat,
   bookingMode: a.bookingMode,
   revolutAccountId: a.revolutAccountId,
   position: a.position,

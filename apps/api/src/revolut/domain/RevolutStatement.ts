@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  StatementFormatDTO,
   last4OfMasked,
   maskCardNumber,
   normalizeText,
@@ -50,7 +51,8 @@ type Field =
   | "fee"
   | "account"
   | "mcc"
-  | "merchant";
+  | "merchant"
+  | "product";
 
 /** Noms de colonne reconnus (normalisés : minuscules, sans accents ni ponctuation). */
 const ALIASES: Record<Field, string[]> = {
@@ -98,6 +100,17 @@ const ALIASES: Record<Field, string[]> = {
   account: ["account", "compte", "account name", "nom du compte"],
   mcc: ["mcc", "merchant category code"],
   merchant: ["merchant", "merchant name", "commercant", "nom du commercant"],
+  product: ["product", "produit"],
+};
+
+/**
+ * Relevé de l'application Revolut (compte personnel) : `Type, Product,
+ * Started Date, Completed Date, Description, Amount, Fee, Currency, State,
+ * Balance` — pas d'ID ni de carte, frais positifs à part.
+ */
+const FORMAT_LABEL: Record<StatementFormatDTO, string> = {
+  [StatementFormatDTO.REVOLUT_BUSINESS]: "Revolut Business",
+  [StatementFormatDTO.REVOLUT_PERSONAL]: "Revolut (compte personnel)",
 };
 
 /** Une carte vue dans le relevé, sur un compte Revolut. */
@@ -297,7 +310,10 @@ function syntheticId(parts: (string | number | null)[]): string {
   return `csv-${createHash("sha256").update(parts.join("|")).digest("hex").slice(0, 24)}`;
 }
 
-export function parseRevolutStatement(text: string): StatementParseResult {
+export function parseRevolutStatement(
+  text: string,
+  format: StatementFormatDTO = StatementFormatDTO.REVOLUT_BUSINESS,
+): StatementParseResult {
   const table = parseCsv(text);
   const errors: string[] = [];
   if (table.length < 2) {
@@ -312,6 +328,24 @@ export function parseRevolutStatement(text: string): StatementParseResult {
   const missing = (["amount"] as Field[]).filter((f) => col[f] === undefined);
   if (col.completed === undefined && col.started === undefined)
     missing.push("completed");
+  if (!missing.length) {
+    // Le fichier doit être du format du compte : un relevé personnel n'a ni
+    // ID ni colonne « Account », un relevé Business n'a pas de « Product ».
+    const looksPersonal = col.id === undefined && col.product !== undefined;
+    const looksBusiness = col.id !== undefined && col.account !== undefined;
+    const mismatch =
+      (format === StatementFormatDTO.REVOLUT_BUSINESS && looksPersonal) ||
+      (format === StatementFormatDTO.REVOLUT_PERSONAL && looksBusiness);
+    if (mismatch) {
+      return {
+        rows: [],
+        cards: [],
+        errors: [
+          `ce fichier ne ressemble pas à un relevé ${FORMAT_LABEL[format]} : vérifiez le format du relevé dans la configuration du compte`,
+        ],
+      };
+    }
+  }
   if (missing.length) {
     return {
       rows: [],
@@ -328,7 +362,14 @@ export function parseRevolutStatement(text: string): StatementParseResult {
     const line = i + 2;
     const get = (f: Field) =>
       col[f] === undefined ? undefined : cells[col[f]!]?.trim() || undefined;
-    const amount = parseAmount(get("total")) ?? parseAmount(get("amount"));
+    const fee = parseAmount(get("fee"));
+    const plain = parseAmount(get("amount"));
+    // Business : « Total amount » (frais compris). Personnel : frais positifs à part.
+    const amount =
+      parseAmount(get("total")) ??
+      (format === StatementFormatDTO.REVOLUT_PERSONAL && plain !== null && fee
+        ? Math.round((plain - Math.abs(fee)) * 100) / 100
+        : plain);
     const date = parseDate(get("completed")) ?? parseDate(get("started"));
     if (amount === null) {
       errors.push(
@@ -345,7 +386,10 @@ export function parseRevolutStatement(text: string): StatementParseResult {
     );
     const state = normalizeState(get("state"));
     const description = get("description") ?? get("reference") ?? null;
-    const account = get("account") ?? get("currency") ?? "Revolut";
+    const account =
+      get("account") ??
+      ([get("product"), get("currency")].filter(Boolean).join(" ") ||
+        "Revolut");
     const currency = (get("currency") ?? "CHF").toUpperCase();
     const origCurrency = get("origCurrency")?.toUpperCase() ?? null;
     const origRaw = parseAmount(get("origAmount"));

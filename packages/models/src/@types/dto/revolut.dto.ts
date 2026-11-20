@@ -1,3 +1,5 @@
+import type { StatementFormatDTO } from "./settings.dto.js";
+
 /** Transaction Revolut Business (une jambe sur un compte de la société). */
 export interface RevolutTransactionDTO {
   id: string;
@@ -36,10 +38,11 @@ export interface RevolutTransactionQueryDTO {
 }
 
 /**
- * `POST revolut/import` : le relevé exporté de Revolut Business (CSV, texte).
- * `paymentAccountId` : le compte de paiement des lignes dont le compte
- * Revolut (colonne « Account ») n'est rattaché à aucun ; défaut : le seul
- * compte Revolut actif.
+ * `POST revolut/import` : le relevé CSV d'un compte rapproché par import.
+ * `paymentAccountId` : le compte importé — son format de relevé s'applique ;
+ * défaut : le seul compte actif rapproché par import. Dans un relevé
+ * Revolut Business qui couvre plusieurs comptes, une ligne dont la colonne
+ * « Account » nomme un autre compte importé va à celui-ci.
  */
 export interface RevolutImportDTO {
   fileName?: string | null;
@@ -59,6 +62,10 @@ export interface RevolutImportResultDTO {
   to: string | null;
   /** Pièces rapprochées automatiquement après l'import. */
   matched: number;
-  /** Cartes du relevé ajoutées au compte Revolut (forme masquée + libellé). */
+  /** Cartes du relevé ajoutées au compte (forme masquée + libellé). */
   cardsAdded: string[];
+  /** Le compte importé et le format lu. */
+  paymentAccountId: string;
+  paymentAccountName: string;
+  format: StatementFormatDTO;
 }

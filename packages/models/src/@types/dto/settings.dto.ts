@@ -4,14 +4,54 @@
  * chiffres — et les types de dépense avec leur imputation bexio.
  */
 
+/**
+ * Nature du compte, pour l'affichage et les valeurs proposées à la création
+ * (le comportement dépend de `ReconciliationModeDTO`, pas de la nature).
+ */
 export enum PaymentAccountKindDTO {
-  /** Revolut Business : rapproché ici, transaction par transaction. */
   REVOLUT = "REVOLUT",
-  /** UBS : le rapprochement bancaire se fait dans bexio. */
+  /** Banque (UBS, PostFinance…). */
   UBS = "UBS",
   /** Compte courant de l'associé (carte privée, espèces) : dette envers Anthony. */
   PERSONAL = "PERSONAL",
   OTHER = "OTHER",
+}
+
+/**
+ * Comment les sorties du compte sont rapprochées de leurs pièces.
+ */
+export enum ReconciliationModeDTO {
+  /**
+   * Dans bexio (rapprochement bancaire, ex. UBS) : l'application propose
+   * l'imputation ; l'écriture naît du rapprochement dans bexio.
+   */
+  BEXIO = "BEXIO",
+  /**
+   * Par l'import d'un relevé CSV (ex. Revolut) : chaque sortie doit trouver
+   * sa pièce ici, les sorties sans pièce sont à demander ; l'application
+   * passe l'écriture dans bexio.
+   */
+  STATEMENT_IMPORT = "STATEMENT_IMPORT",
+  /**
+   * Aucun relevé (ex. compte courant de l'associé, espèces) : la pièce seule
+   * suffit, l'application passe l'écriture.
+   */
+  NONE = "NONE",
+}
+
+/** Format du relevé CSV d'un compte rapproché par import. */
+export enum StatementFormatDTO {
+  /** Revolut Business → Transactions → Relevé → CSV. */
+  REVOLUT_BUSINESS = "REVOLUT_BUSINESS",
+  /** Application Revolut (compte personnel) → Relevé → CSV. */
+  REVOLUT_PERSONAL = "REVOLUT_PERSONAL",
+}
+
+/** Le mode d'écriture qui découle du rapprochement. */
+export function bookingModeFor(mode: ReconciliationModeDTO): BookingModeDTO {
+  return mode === ReconciliationModeDTO.BEXIO
+    ? BookingModeDTO.BEXIO_RECONCILIATION
+    : BookingModeDTO.MANUAL_ENTRY;
 }
 
 /** Comment une pièce prête finit dans bexio. */
@@ -48,8 +88,16 @@ export interface PaymentAccountDTO {
   name: string;
   /** Compte du plan comptable bexio crédité (ex. 1021 Revolut, 2210 CC Anthony). */
   bexioAccountNo: string | null;
+  /** Rapprochement des sorties : dans bexio, par import de relevé, ou aucun. */
+  reconciliation: ReconciliationModeDTO;
+  /** Format du relevé importé (import seulement). */
+  statementFormat: StatementFormatDTO | null;
+  /** Découle de `reconciliation` (BEXIO → BEXIO_RECONCILIATION, sinon MANUAL_ENTRY). */
   bookingMode: BookingModeDTO;
-  /** Compte Revolut (`account_id` des transactions) ; Revolut seulement. */
+  /**
+   * Nom du compte dans le relevé (colonne « Account » de Revolut Business,
+   * ex. « CHF Main ») quand un relevé couvre plusieurs comptes ; import seulement.
+   */
   revolutAccountId: string | null;
   position: number;
   active: boolean;
@@ -62,6 +110,9 @@ export interface CreatePaymentAccountDTO {
   kind: PaymentAccountKindDTO;
   name: string;
   bexioAccountNo?: string | null;
+  reconciliation?: ReconciliationModeDTO;
+  statementFormat?: StatementFormatDTO | null;
+  /** Ignoré : découle de `reconciliation` (gardé pour compatibilité). */
   bookingMode?: BookingModeDTO;
   revolutAccountId?: string | null;
   position?: number;

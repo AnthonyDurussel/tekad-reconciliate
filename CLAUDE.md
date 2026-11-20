@@ -50,7 +50,7 @@ answer 409 — never a 500.
 
 | Notion                                                                                                                                                                                                                       | Code                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Compte de paiement: `REVOLUT`, `UBS`, `PERSONAL` (compte courant Anthony), `OTHER`; bexio account credited (`1021`, `1020`, `2210`…), booking mode `MANUAL_ENTRY` (the app posts) or `BEXIO_RECONCILIATION` (UBS: done in bexio) | `payment_accounts`, `PaymentAccountDTO`                  |
+| Compte de paiement: any account (nature `REVOLUT`, `UBS` = bank, `PERSONAL`, `OTHER` — display and defaults only); bexio account credited (`1021`, `1020`, `2210`…); **rapprochement** `reconciliation`: `BEXIO` (bank reconciliation done in bexio, e.g. UBS — the app proposes the booking only), `STATEMENT_IMPORT` (CSV statement imported here, format `statementFormat` `REVOLUT_BUSINESS` / `REVOLUT_PERSONAL`; every debit needs its receipt; optional statement account name `revolutAccountId` for multi-account Business statements) or `NONE` (no statement, e.g. compte courant); `bookingMode` derived (`bookingModeFor()`: BEXIO → `BEXIO_RECONCILIATION`, else `MANUAL_ENTRY`) | `payment_accounts`, `PaymentAccountDTO`                  |
 | Carte: typed in full or masked in « Comptes et cartes » (`number`, never stored) → last 4 digits (unique) + masked form `516760******4721` (`maskCardNumber()`); also added automatically from the Revolut statement (`Card number`, `Card label`) to the Revolut account; the card read on a receipt gives its payment account (`accountForCard()`) | `payment_cards`                                          |
 | Type de dépense: **taken from the bexio chart of accounts** — one per active EXPENSE account (`POST expense-categories/sync-bexio`: code = account number, label = bexio name, bexio `tax_id` and its rate; default keyword / MCC rules by account number on creation, `DEFAULT_RULES_BY_ACCOUNT`; the user's rules kept; a type whose account left bexio is deactivated); **keywords** and **MCC codes** (`categoryByRules()`) | `expense_categories` (`bexio_account_id`), `ExpenseCategoryDTO` |
 | Pièce: one bexio inbox file; extraction, account (+ source CARD / TRANSACTION / MANUAL), type (+ source RULE / AI / MANUAL), booking overrides, Revolut transaction, bexio entry                                             | `expenses`, `ExpenseDTO`, `Expense` (domain)             |
@@ -59,21 +59,25 @@ answer 409 — never a 500.
 bexio chart (`GET bexio/accounts`, `GET bexio/taxes`, port `IBexioGateway.listAccounts/listTaxes`): with bexio configured, an expense type's account must be an EXPENSE account and a payment account's an ASSET or LIABILITY account of the chart (400 otherwise); without bexio the number is taken as typed. The screens pick accounts and VAT codes from these lists (free text when bexio answers 409).
 
 Status (`expenseStatus()`): `NEW` (not read) → `TO_REVIEW` / `READY` (computed: date, amount,
-payment account, type, and **for Revolut the matched transaction**) → `BOOKED`; `IGNORED` aside.
+payment account, type, and **for a `STATEMENT_IMPORT` account the matched transaction**) → `BOOKED`; `IGNORED` aside.
 Precedence: a MANUAL value is never overwritten by a re-extraction or a sync.
 
 Classification order for the payment account: card on the receipt → the matched Revolut
 transaction's account → manual. Type: keyword/MCC rule → the AI's proposal (`categoryCode`) → manual.
 
-Revolut statement (`parseRevolutStatement()`): Revolut Business → Transactions → Statement → CSV.
+Statement import (`POST revolut/import`, `paymentAccountId` = the account whose statement it is —
+required when several accounts are `STATEMENT_IMPORT`; its `statementFormat` applies; a file of the
+other format is refused). `REVOLUT_PERSONAL` = Revolut app CSV (`Type, Product, Started Date,
+Completed Date, Description, Amount, Fee, Currency, State, Balance`; no ID → stable hash; fee apart).
+Revolut Business statement (`parseRevolutStatement()`): Revolut Business → Transactions → Statement → CSV.
 Columns found by name (English export: `Date started (UTC)`, `Date completed (UTC)`, `ID`, `Type`,
 `State`, `Description` = merchant, `Card number` `516760******4721`, `Orig currency` / `Orig amount`
 (unsigned), `Payment currency`, `Amount`, `Total amount` = Amount + Fee, `Account` « CHF Main »,
 `MCC`; French headers, `;` and `jj.mm.aaaa` tolerated). Amount kept = `Total amount` (what left the
 account); `Orig amount` in its currency = `billAmount` for matching. Unique (ID, Account): re-importing
 or overlapping statements updates, never duplicates. Rows go to the payment account whose
-`revolutAccountId` equals `Account` (case-insensitive), else the one chosen, else the only active
-Revolut account. Unknown cards of the statement join that Revolut account (`cardsAdded`). The
+`revolutAccountId` equals `Account` (case-insensitive) among the imported accounts, else the chosen
+account. Unknown cards of the statement join that account (`cardsAdded`). The
 import then runs the matching.
 
 Matching (`scoreMatch()`, `autoMatch()`): amount is mandatory (account amount, or bill amount in the
