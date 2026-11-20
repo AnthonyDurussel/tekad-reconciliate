@@ -65,7 +65,7 @@
   "nav": {
     "dashboard": "Tableau de bord",
     "expenses": "Pièces",
-    "revolut": "Revolut",
+    "revolut": "Relevés",
     "admin": {
       "main": "Administration",
       "accounts": "Comptes et cartes",
@@ -92,7 +92,7 @@
     "vsPrevious": "vs période préc.",
     "title": "Tableau de bord",
     "subtitle": "Où en sont les pièces de la période, ce qu'elles pèsent, ce qui manque.",
-    "missing": "Pièces Revolut manquantes",
+    "missing": "Pièces manquantes",
     "missingHint": "{{amount}} de sorties sans pièce",
     "statusHint": {
       "NEW": "importées, pas encore lues",
@@ -111,7 +111,7 @@
   },
   "sync": {
     "title": "Synchronisation",
-    "subtitle": "Inbox bexio → lecture des pièces → rapprochement, chaque nuit et à la demande. Revolut : importez le relevé CSV.",
+    "subtitle": "Inbox bexio → lecture des pièces → rapprochement, chaque nuit et à la demande. Relevés : importez le CSV de chaque compte.",
     "all": "Tout synchroniser",
     "source": "Étape",
     "lastRun": "Dernier passage",
@@ -132,8 +132,8 @@
       "extract": "Lire les pièces",
       "match": "Rapprocher"
     },
-    "revolutLatest": "Relevé Revolut jusqu'au {{date}}",
-    "revolutNone": "Aucun relevé Revolut importé"
+    "revolutLatest": "Relevés importés jusqu'au {{date}}",
+    "revolutNone": "Aucun relevé importé"
   },
   "expenses": {
     "title": "Pièces",
@@ -248,8 +248,8 @@
     "restoredDone": "Pièce restaurée."
   },
   "revolut": {
-    "title": "Revolut",
-    "subtitle": "Les transactions Revolut Business et les pièces qui leur manquent.",
+    "title": "Relevés",
+    "subtitle": "Transactions importées et pièces manquantes",
     "search": "Rechercher (commerçant, libellé…)",
     "tabs": {
       "all": "Toutes",
@@ -273,8 +273,8 @@
     },
     "missingTitle_one": "{{count}} pièce à demander",
     "missingTitle_other": "{{count}} pièces à demander",
-    "missingText": "Sorties Revolut sans pièce ni dispense : {{total}}.",
-    "missingNone": "Toutes les sorties Revolut de la période ont leur pièce.",
+    "missingText": "Sorties sans pièce ni dispense : {{total}}.",
+    "missingNone": "Toutes les sorties importées de la période ont leur pièce.",
     "copy": "Copier la liste",
     "copied": "Liste copiée dans le presse-papiers.",
     "copyFailed": "La liste n'a pas pu être copiée.",
@@ -293,7 +293,8 @@
       "atm": "Retrait",
       "tax": "Taxe",
       "charge": "Frais"
-    }
+    },
+    "allAccounts": "Tous les comptes"
   },
   "ignore": {
     "reason": "Raison",
@@ -308,21 +309,16 @@
     },
     "accounts": {
       "title": "Comptes et cartes",
-      "subtitle": "Les comptes qui paient, leur compte bexio, et les cartes reconnues sur les tickets.",
+      "subtitle": "Les comptes qui paient, leur compte bexio, leur rapprochement et les cartes reconnues sur les tickets.",
       "create": "Nouveau compte",
       "edit": "Modifier le compte",
       "empty": "Aucun compte de paiement.",
       "name": "Nom",
-      "kind": "Genre",
+      "kind": "Nature",
       "bexioAccount": "Compte bexio",
       "bexioAccountHint": "Compte crédité, du plan comptable bexio (1021 Revolut, 1020 UBS, 2210 compte courant Anthony…)",
-      "bookingMode": "Comptabilisation",
-      "bookingModeHint": {
-        "MANUAL_ENTRY": "L'application passe l'écriture dans bexio, pièce jointe.",
-        "BEXIO_RECONCILIATION": "L'écriture naît du rapprochement bancaire dans bexio ; l'application marque la pièce comptabilisée."
-      },
-      "revolutAccountId": "Compte Revolut (colonne « Account » du relevé)",
-      "revolutAccountIdHint": "Ex. « CHF Main » : les lignes de ce compte dans le relevé CSV lui sont rattachées. Vide : avec un seul compte Revolut, tout le relevé y va.",
+      "revolutAccountId": "Nom du compte dans le relevé (colonne « Account »)",
+      "revolutAccountIdHint": "Ex. « CHF Main » : les lignes de ce compte d'un relevé multi-comptes lui sont rattachées. Facultatif.",
       "cards": "Cartes",
       "cardsHint": "Tapez ou collez le numéro de la carte (entier ou masqué) : seuls sa forme masquée et ses 4 derniers chiffres sont gardés. Les 4 derniers chiffres lus sur un ticket rattachent la pièce à ce compte.",
       "cardLabel": "Libellé",
@@ -340,7 +336,16 @@
       "cardNumberInvalid": "Le numéro doit finir par 4 chiffres.",
       "cardNumberRequired": "Saisissez le numéro de la carte.",
       "noCard": "Aucune carte : ajoutez celles de ce compte pour reconnaître ses tickets.",
-      "removeCard": "Retirer la carte"
+      "removeCard": "Retirer la carte",
+      "reconciliation": "Rapprochement",
+      "reconciliationHint": "Comment les sorties de ce compte retrouvent leurs pièces.",
+      "reconciliationModeHint": {
+        "BEXIO": "Rapprochement bancaire dans bexio (ex. UBS) : l'application propose seulement l'imputation.",
+        "STATEMENT_IMPORT": "Relevé CSV importé ici : chaque sortie cherche sa pièce, les manquantes sont à demander ; l'application passe l'écriture.",
+        "NONE": "Aucun relevé (ex. compte courant, espèces) : la pièce suffit, l'application passe l'écriture."
+      },
+      "statementFormat": "Format du relevé",
+      "statementFormatHint": "L'export CSV dont ce compte reçoit l'import."
     },
     "categories": {
       "title": "Types de dépense",
@@ -460,8 +465,8 @@
       "MANUAL": "Saisi à la main : une relecture ne l'écrase pas."
     },
     "paymentAccountKind": {
-      "REVOLUT": "Revolut Business",
-      "UBS": "UBS",
+      "REVOLUT": "Revolut",
+      "UBS": "Banque",
       "PERSONAL": "Compte courant associé",
       "OTHER": "Autre"
     },
@@ -472,25 +477,38 @@
     "syncSource": {
       "BEXIO_INBOX": "Inbox bexio",
       "EXTRACTION": "Lecture des pièces",
-      "REVOLUT": "Transactions Revolut",
+      "REVOLUT": "Relevés importés",
       "MATCHING": "Rapprochement"
+    },
+    "reconciliationMode": {
+      "BEXIO": "Dans bexio",
+      "STATEMENT_IMPORT": "Import du relevé CSV",
+      "NONE": "Sans relevé"
+    },
+    "statementFormat": {
+      "REVOLUT_BUSINESS": "Revolut Business",
+      "REVOLUT_PERSONAL": "Revolut (compte personnel)"
     }
   },
   "revolutImport": {
-    "button": "Importer le relevé Revolut (CSV)",
+    "button": "Importer un relevé (CSV)",
     "tooLarge": "Fichier trop volumineux (10 Mo au plus).",
-    "done_one": "{{count}} transaction importée",
-    "done_other": "{{count}} transactions importées",
+    "done_one": "{{account}} : {{count}} transaction importée",
+    "done_other": "{{account}} : {{count}} transactions importées",
     "detail": "{{created}} nouvelle(s), {{updated}} mise(s) à jour",
     "period": "du {{from}} au {{to}}",
     "matched_one": "{{count}} pièce rapprochée",
     "matched_other": "{{count}} pièces rapprochées",
     "errors_one": "{{count}} ligne illisible ({{first}})",
     "errors_other": "{{count}} lignes illisibles, dont : {{first}}",
-    "failed": "Relevé non importé",
-    "hint": "Revolut Business → Transactions → Relevé → CSV. Réimporter un relevé met à jour sans doublon.",
+    "failed": "Relevé de « {{account}} » non importé",
+    "hint": "Choisissez le compte, puis son relevé CSV (Revolut : Transactions → Relevé → CSV). Réimporter un relevé met à jour sans doublon.",
     "cardsAdded_one": "{{count}} carte ajoutée : {{cards}}",
-    "cardsAdded_other": "{{count}} cartes ajoutées : {{cards}}"
+    "cardsAdded_other": "{{count}} cartes ajoutées : {{cards}}",
+    "hintFor": "Relevé CSV de « {{account}} » ({{format}}). Réimporter un relevé met à jour sans doublon.",
+    "pickAccount": "Relevé de quel compte ?",
+    "accountOption": "{{account}} — {{format}}",
+    "noAccount": "Aucun compte actif n'est rapproché par import de relevé : choisissez « Import du relevé CSV » dans Comptes et cartes."
   },
   "aiSettings": {
     "title": "Intelligence artificielle",

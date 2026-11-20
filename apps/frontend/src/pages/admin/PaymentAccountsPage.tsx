@@ -253,7 +253,7 @@ const cardLast4 = (card: CardRow) => {
  * La nature du compte suggère son rapprochement : une banque (UBS) dans
  * bexio, Revolut par l'import du relevé Revolut Business, le reste sans relevé.
  */
-export function defaultReconciliation(kind: PaymentAccountKindDTO): {
+function defaultReconciliation(kind: PaymentAccountKindDTO): {
   reconciliation: ReconciliationModeDTO;
   statementFormat: StatementFormatDTO | null;
 } {
@@ -480,9 +480,7 @@ function AccountForm({
             data={enumOptions(t, "statementFormat", StatementFormatDTO)}
             value={statementFormat}
             allowDeselect={false}
-            error={
-              showErrors && !statementFormat ? t("common.required") : null
-            }
+            error={showErrors && !statementFormat ? t("common.required") : null}
             onChange={(v) => setStatementFormat(v as StatementFormatDTO | null)}
           />
           <TextInput
@@ -506,6 +504,7 @@ function AccountForm({
           variant="light"
           leftSection={<IconPlus size={16} />}
           onClick={addCard}
+          style={{ flexShrink: 0 }}
         >
           {t("admin.accounts.addCard")}
         </Button>
@@ -532,7 +531,9 @@ function AccountForm({
                 spellCheck={false}
                 maxLength={40}
                 autoFocus={!c.id && !c.numberInput}
-                ff="monospace"
+                styles={{
+                  input: { fontFamily: "var(--mantine-font-family-monospace)" },
+                }}
                 style={{ flex: 1.4 }}
                 value={c.numberInput}
                 error={cardError(c)}

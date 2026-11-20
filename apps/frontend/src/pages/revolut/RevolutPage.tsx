@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Group,
+  Select,
   Stack,
   Table,
   Tabs,
@@ -36,6 +37,7 @@ import Page from "@/components/Page";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import PeriodPicker from "@/components/PeriodPicker";
 import RevolutImportButton from "@/components/revolut/RevolutImportButton";
+import { importableAccounts } from "@/components/revolut/statementAccounts";
 import IgnoreModal from "@/components/expense/IgnoreModal";
 import usePermissions from "@/hooks/usePermissions";
 import {
@@ -57,8 +59,10 @@ type Tab = NonNullable<RevolutTransactionQueryDTO["filter"]>;
 const TABS: Tab[] = ["all", "missing", "matched", "ignored"];
 
 /**
- * Les transactions Revolut Business. L'onglet « Pièces manquantes » liste les
- * sorties sans pièce ni dispense : ce qu'il faut demander, à copier d'un clic.
+ * Les relevés importés (Revolut Business, Revolut compte personnel…), filtrés
+ * au besoin par compte (côté client, sur `paymentAccountId`). L'onglet
+ * « Pièces manquantes » liste les sorties sans pièce ni dispense : ce qu'il
+ * faut demander, à copier d'un clic.
  */
 export default function RevolutPage() {
   const { t } = useTranslation();
@@ -91,13 +95,30 @@ export default function RevolutPage() {
     (value: string) => setParam({ search: value.trim() || null }),
     300,
   );
-  const { data: transactions = [], isFetching } =
+  const accountFilter = params.get("account");
+  const { data: allTransactions = [], isFetching } =
     useGetRevolutTransactionsQuery({
       ...period,
       filter: tab,
       search: searchParam || undefined,
     });
   const { data: accounts = [] } = useGetPaymentAccountsQuery();
+  const transactions = useMemo(
+    () =>
+      accountFilter
+        ? allTransactions.filter((tx) => tx.paymentAccountId === accountFilter)
+        : allTransactions,
+    [allTransactions, accountFilter],
+  );
+  // Les comptes importés, et ceux qui portent déjà des transactions.
+  const accountOptions = accounts
+    .filter(
+      (a) =>
+        a.id === accountFilter ||
+        importableAccounts([a]).length > 0 ||
+        allTransactions.some((tx) => tx.paymentAccountId === a.id),
+    )
+    .map((a) => ({ value: a.id, label: a.name }));
   const [ignore, { isLoading: ignoring }] =
     useIgnoreRevolutTransactionMutation();
   const [restore] = useRestoreRevolutTransactionMutation();
@@ -157,6 +178,17 @@ export default function RevolutPage() {
           }}
           w={260}
         />
+        {accountOptions.length > 1 && (
+          <Select
+            placeholder={t("revolut.allAccounts")}
+            aria-label={t("expenses.account")}
+            data={accountOptions}
+            value={accountFilter}
+            onChange={(v) => setParam({ account: v })}
+            clearable
+            w={240}
+          />
+        )}
       </Group>
       <Tabs
         value={tab}

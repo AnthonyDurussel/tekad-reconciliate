@@ -65,7 +65,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "expenses": "Receipts",
-    "revolut": "Revolut",
+    "revolut": "Statements",
     "admin": {
       "main": "Administration",
       "accounts": "Accounts & cards",
@@ -92,7 +92,7 @@
     "vsPrevious": "vs previous period",
     "title": "Dashboard",
     "subtitle": "Where the period's receipts stand, what they weigh, what is missing.",
-    "missing": "Missing Revolut receipts",
+    "missing": "Missing receipts",
     "missingHint": "{{amount}} of debits without a receipt",
     "statusHint": {
       "NEW": "imported, not read yet",
@@ -111,7 +111,7 @@
   },
   "sync": {
     "title": "Synchronisation",
-    "subtitle": "bexio inbox → receipt reading → matching, nightly and on demand. Revolut: import the CSV statement.",
+    "subtitle": "bexio inbox → receipt reading → matching, nightly and on demand. Statements: import each account's CSV.",
     "all": "Sync everything",
     "source": "Step",
     "lastRun": "Last run",
@@ -132,8 +132,8 @@
       "extract": "Read receipts",
       "match": "Match"
     },
-    "revolutLatest": "Revolut statement up to {{date}}",
-    "revolutNone": "No Revolut statement imported"
+    "revolutLatest": "Statements imported up to {{date}}",
+    "revolutNone": "No statement imported"
   },
   "expenses": {
     "title": "Receipts",
@@ -248,8 +248,8 @@
     "restoredDone": "Receipt restored."
   },
   "revolut": {
-    "title": "Revolut",
-    "subtitle": "Revolut Business transactions and the receipts they lack.",
+    "title": "Statements",
+    "subtitle": "Imported transactions and missing receipts",
     "search": "Search (merchant, reference…)",
     "tabs": {
       "all": "All",
@@ -273,8 +273,8 @@
     },
     "missingTitle_one": "{{count}} receipt to ask for",
     "missingTitle_other": "{{count}} receipts to ask for",
-    "missingText": "Revolut debits without a receipt or waiver: {{total}}.",
-    "missingNone": "Every Revolut debit of the period has its receipt.",
+    "missingText": "Debits without a receipt or waiver: {{total}}.",
+    "missingNone": "Every imported debit of the period has its receipt.",
     "copy": "Copy the list",
     "copied": "List copied to the clipboard.",
     "copyFailed": "The list could not be copied.",
@@ -293,7 +293,8 @@
       "atm": "Cash withdrawal",
       "tax": "Tax",
       "charge": "Charge"
-    }
+    },
+    "allAccounts": "All accounts"
   },
   "ignore": {
     "reason": "Reason",
@@ -308,21 +309,16 @@
     },
     "accounts": {
       "title": "Accounts & cards",
-      "subtitle": "The accounts that pay, their bexio account, and the cards recognised on receipts.",
+      "subtitle": "The paying accounts, their bexio account, their reconciliation and the cards recognised on receipts.",
       "create": "New account",
       "edit": "Edit account",
       "empty": "No payment account.",
       "name": "Name",
-      "kind": "Kind",
+      "kind": "Nature",
       "bexioAccount": "bexio account",
       "bexioAccountHint": "Credited account, from the bexio chart of accounts (1021 Revolut, 1020 UBS, 2210 Anthony's current account…)",
-      "bookingMode": "Booking",
-      "bookingModeHint": {
-        "MANUAL_ENTRY": "The application posts the entry in bexio, receipt attached.",
-        "BEXIO_RECONCILIATION": "The entry comes from the bank reconciliation in bexio; the application marks the receipt booked."
-      },
-      "revolutAccountId": "Revolut account (statement « Account » column)",
-      "revolutAccountIdHint": "E.g. « CHF Main »: statement rows of this account belong here. Empty: with a single Revolut account, the whole statement goes to it.",
+      "revolutAccountId": "Account name in the statement (« Account » column)",
+      "revolutAccountIdHint": "E.g. « CHF Main »: the lines of this account in a multi-account statement go to it. Optional.",
       "cards": "Cards",
       "cardsHint": "Type or paste the card number (full or masked): only its masked form and last 4 digits are kept. The last 4 digits read on a receipt link it to this account.",
       "cardLabel": "Label",
@@ -340,7 +336,16 @@
       "cardNumberInvalid": "The number must end with 4 digits.",
       "cardNumberRequired": "Enter the card number.",
       "noCard": "No card: add this account's cards to recognise its receipts.",
-      "removeCard": "Remove the card"
+      "removeCard": "Remove the card",
+      "reconciliation": "Reconciliation",
+      "reconciliationHint": "How this account's debits find their receipts.",
+      "reconciliationModeHint": {
+        "BEXIO": "Bank reconciliation in bexio (e.g. UBS): the app only proposes the booking.",
+        "STATEMENT_IMPORT": "CSV statement imported here: each debit looks for its receipt, missing ones are to be asked for; the app posts the entry.",
+        "NONE": "No statement (e.g. current account, cash): the receipt is enough, the app posts the entry."
+      },
+      "statementFormat": "Statement format",
+      "statementFormatHint": "The CSV export imported into this account."
     },
     "categories": {
       "title": "Expense types",
@@ -460,8 +465,8 @@
       "MANUAL": "Entered by hand: a new reading does not overwrite it."
     },
     "paymentAccountKind": {
-      "REVOLUT": "Revolut Business",
-      "UBS": "UBS",
+      "REVOLUT": "Revolut",
+      "UBS": "Bank",
       "PERSONAL": "Partner's current account",
       "OTHER": "Other"
     },
@@ -472,25 +477,38 @@
     "syncSource": {
       "BEXIO_INBOX": "bexio inbox",
       "EXTRACTION": "Receipt reading",
-      "REVOLUT": "Revolut transactions",
+      "REVOLUT": "Imported statements",
       "MATCHING": "Matching"
+    },
+    "reconciliationMode": {
+      "BEXIO": "In bexio",
+      "STATEMENT_IMPORT": "CSV statement import",
+      "NONE": "No statement"
+    },
+    "statementFormat": {
+      "REVOLUT_BUSINESS": "Revolut Business",
+      "REVOLUT_PERSONAL": "Revolut (personal account)"
     }
   },
   "revolutImport": {
-    "button": "Import Revolut statement (CSV)",
+    "button": "Import a statement (CSV)",
     "tooLarge": "File too large (10 MB max).",
-    "done_one": "{{count}} transaction imported",
-    "done_other": "{{count}} transactions imported",
+    "done_one": "{{account}}: {{count}} transaction imported",
+    "done_other": "{{account}}: {{count}} transactions imported",
     "detail": "{{created}} new, {{updated}} updated",
     "period": "from {{from}} to {{to}}",
     "matched_one": "{{count}} receipt matched",
     "matched_other": "{{count}} receipts matched",
     "errors_one": "{{count}} unreadable line ({{first}})",
     "errors_other": "{{count}} unreadable lines, e.g. {{first}}",
-    "failed": "Statement not imported",
-    "hint": "Revolut Business → Transactions → Statement → CSV. Re-importing updates without duplicates.",
+    "failed": "Statement of « {{account}} » not imported",
+    "hint": "Pick the account, then its CSV statement (Revolut: Transactions → Statement → CSV). Re-importing updates without duplicates.",
     "cardsAdded_one": "{{count}} card added: {{cards}}",
-    "cardsAdded_other": "{{count}} cards added: {{cards}}"
+    "cardsAdded_other": "{{count}} cards added: {{cards}}",
+    "hintFor": "CSV statement of « {{account}} » ({{format}}). Re-importing updates without duplicates.",
+    "pickAccount": "Statement of which account?",
+    "accountOption": "{{account}} — {{format}}",
+    "noAccount": "No active account is reconciled by statement import: choose « CSV statement import » in Accounts and cards."
   },
   "aiSettings": {
     "title": "Artificial intelligence",
