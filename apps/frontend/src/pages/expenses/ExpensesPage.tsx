@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  Badge,
   Button,
   Card,
   Group,
@@ -10,14 +9,10 @@ import {
   Table,
   Text,
   TextInput,
-  ThemeIcon,
-  Tooltip,
 } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
 import {
   IconFileSpreadsheet,
-  IconLink,
-  IconLinkOff,
   IconReceipt,
   IconSearch,
 } from "@tabler/icons-react";
@@ -25,7 +20,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ExpenseStatusDTO,
-  PaymentAccountKindDTO,
   type ExpenseDTO,
   type ExpenseQueryDTO,
   type PaymentAccountDTO,
@@ -34,6 +28,8 @@ import Page from "@/components/Page";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import PeriodPicker from "@/components/PeriodPicker";
 import AccountBadge from "@/components/expense/AccountBadge";
+import ExpenseLinkIcons from "@/components/expense/ExpenseLinkIcons";
+import ExpenseOriginBadge from "@/components/expense/ExpenseOriginBadge";
 import ExpenseStatusBadge from "@/components/expense/ExpenseStatusBadge";
 import {
   expensesExportUrl,
@@ -49,14 +45,17 @@ import {
   formatDate,
 } from "@/utils/format";
 import { lastThreeMonths, type Period } from "@/utils/period";
+import { ISSUE_FILTERS, expenseLabel, parseIssueFilter } from "./expenseLinks";
 
 /** Valeur des filtres « compte » et « type » pour « non renseigné ». */
 const NONE = "none";
 
 /**
- * Les pièces importées de l'inbox bexio. Filtres dans l'URL (période,
- * compte de paiement, type de dépense, statut, recherche) : le retour depuis
- * le détail d'une pièce les retrouve ; l'export Excel les reprend.
+ * Les dépenses : chacune née d'une pièce de l'inbox bexio, d'une sortie du
+ * relevé ou d'une dépense bexio, avec ses trois liens (pièce, bexio,
+ * rapprochement). Filtres dans l'URL (période, compte de paiement, type,
+ * statut, « À faire », recherche) : le retour depuis le détail d'une dépense
+ * les retrouve ; l'export Excel les reprend.
  */
 export default function ExpensesPage() {
   const { t } = useTranslation();
@@ -83,6 +82,7 @@ export default function ExpensesPage() {
   const accountId = params.get("account");
   const categoryId = params.get("category");
   const status = params.get("status") as ExpenseStatusDTO | null;
+  const issue = parseIssueFilter(params.get("issue"));
   const searchParam = params.get("search") ?? "";
   const [search, setSearch] = useState(searchParam);
   const pushSearch = useDebouncedCallback(
@@ -95,6 +95,7 @@ export default function ExpensesPage() {
     paymentAccountId: accountId ?? undefined,
     categoryId: categoryId ?? undefined,
     status: status ?? undefined,
+    issue: issue ?? undefined,
     search: searchParam || undefined,
   };
   const { data: expenses = [], isFetching } = useGetExpensesQuery(query);
@@ -187,6 +188,18 @@ export default function ExpensesPage() {
             clearable
             w={170}
           />
+          <Select
+            placeholder={t("expenses.allIssues")}
+            aria-label={t("expenses.issueFilter")}
+            data={ISSUE_FILTERS.map((value) => ({
+              value,
+              label: t(`expenses.issueOptions.${value}`),
+            }))}
+            value={issue}
+            onChange={(v) => setParam({ issue: v })}
+            clearable
+            w={230}
+          />
           <TextInput
             placeholder={t("expenses.search")}
             aria-label={t("expenses.search")}
@@ -201,7 +214,7 @@ export default function ExpensesPage() {
         </Group>
       </Stack>
       <Card withBorder p={0}>
-        <Table.ScrollContainer minWidth={1100}>
+        <Table.ScrollContainer minWidth={1200}>
           <Table verticalSpacing="sm" highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -213,9 +226,7 @@ export default function ExpensesPage() {
                 <Table.Th>{t("expenses.category")}</Table.Th>
                 <Table.Th>{t("expenses.booking")}</Table.Th>
                 <Table.Th>{t("expenses.status")}</Table.Th>
-                <Table.Th w={60} ta="center">
-                  {t("expenses.revolut")}
-                </Table.Th>
+                <Table.Th>{t("expenses.linksTitle")}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -271,9 +282,8 @@ function ExpenseRow({
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
-  const account = accounts.find((a) => a.id === e.paymentAccountId);
-  const isRevolut = account?.kind === PaymentAccountKindDTO.REVOLUT;
   const { debitAccountNo, creditAccountNo } = e.booking;
+  const label = expenseLabel(e);
   return (
     <Table.Tr
       style={{ cursor: "pointer" }}
@@ -282,11 +292,14 @@ function ExpenseRow({
       tabIndex={0}
     >
       <Table.Td style={{ whiteSpace: "nowrap" }}>{formatDate(e.date)}</Table.Td>
-      <Table.Td maw={260}>
-        <Text size="sm" fw={600} truncate>
-          {e.merchant ?? e.fileName}
-        </Text>
-        {e.description && (
+      <Table.Td maw={280}>
+        <Group gap={6} wrap="nowrap">
+          <Text size="sm" fw={600} truncate c={label ? undefined : "dimmed"}>
+            {label ?? t("expenses.noMerchant")}
+          </Text>
+          <ExpenseOriginBadge source={e.source} />
+        </Group>
+        {e.description && e.description !== label && (
           <Text size="xs" c="dimmed" truncate>
             {e.description}
           </Text>
@@ -333,28 +346,8 @@ function ExpenseRow({
       <Table.Td>
         <ExpenseStatusBadge status={e.status} />
       </Table.Td>
-      <Table.Td ta="center">
-        {isRevolut &&
-          (e.transactionId ? (
-            <Tooltip label={t("expenses.matched")}>
-              <ThemeIcon size="sm" radius="xl" variant="light" color="teal">
-                <IconLink size={12} />
-              </ThemeIcon>
-            </Tooltip>
-          ) : (
-            <Tooltip label={t("expenses.notMatched")}>
-              <ThemeIcon size="sm" radius="xl" variant="light" color="orange">
-                <IconLinkOff size={12} />
-              </ThemeIcon>
-            </Tooltip>
-          ))}
-        {e.bexioEntryId && (
-          <Tooltip label={t("expenses.bexioEntry", { id: e.bexioEntryId })}>
-            <Badge size="xs" variant="dot" color="teal" ml={4}>
-              bexio
-            </Badge>
-          </Tooltip>
-        )}
+      <Table.Td>
+        <ExpenseLinkIcons expense={e} />
       </Table.Td>
     </Table.Tr>
   );

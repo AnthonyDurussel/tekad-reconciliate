@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReconciliationModeDTO } from "@repo/models";
-import {
-  paymentSourceKey,
-  previewFiles,
-  previewKind,
-  reconciliationState,
-} from "./bexioExpenseDetail";
+import { previewFiles, previewKind } from "./bexioExpenseDetail";
 
 const urls = {
   attachment: (id: string, uuid: string) => `/b/${id}/${uuid}`,
@@ -41,92 +35,34 @@ describe("previewFiles", () => {
     ]);
   });
 
-  it("sans fichier joint, montre la pièce liée", () => {
+  it("sans fichier joint, montre la pièce de la dépense rattachée", () => {
     expect(
       previewFiles({ id: "b1", expenseId: "e1", attachments: [] }, urls, {
+        receiptId: "r1",
         fileName: "scan.png",
         mimeType: "image/png",
       }),
     ).toEqual([
       { key: "expense:e1", url: "/e/e1", name: "scan.png", kind: "image" },
     ]);
+  });
+
+  it("rien quand la dépense rattachée n'a pas de pièce (ou pas encore chargée)", () => {
+    expect(
+      previewFiles({ id: "b1", expenseId: "e1", attachments: [] }, urls, {
+        receiptId: null,
+        fileName: null,
+        mimeType: null,
+      }),
+    ).toEqual([]);
     expect(
       previewFiles({ id: "b1", expenseId: "e1", attachments: [] }, urls),
-    ).toEqual([{ key: "expense:e1", url: "/e/e1", name: null, kind: "frame" }]);
+    ).toEqual([]);
   });
 
   it("rien sans fichier ni pièce", () => {
     expect(
       previewFiles({ id: "b1", expenseId: null, attachments: [] }, urls),
     ).toEqual([]);
-  });
-});
-
-describe("paymentSourceKey", () => {
-  it("dit d'où vient le compte payeur", () => {
-    expect(
-      paymentSourceKey({ paymentAccountId: null, paymentAccountSource: null }),
-    ).toBe("UNKNOWN");
-    expect(
-      paymentSourceKey({
-        paymentAccountId: "a1",
-        paymentAccountSource: "MANUAL",
-      }),
-    ).toBe("MANUAL");
-    expect(
-      paymentSourceKey({ paymentAccountId: "a1", paymentAccountSource: null }),
-    ).toBe("ACCOUNT_NO");
-  });
-});
-
-describe("reconciliationState", () => {
-  const base = {
-    reconciled: false as boolean | null,
-    bexioReconciled: false,
-    reconciliation: ReconciliationModeDTO.BEXIO as ReconciliationModeDTO | null,
-    expenseId: null as string | null,
-  };
-  it("non requis sans relevé", () => {
-    expect(reconciliationState({ ...base, reconciled: null })).toBe(
-      "notRequired",
-    );
-  });
-  it("rapprochée dans bexio ou par le relevé", () => {
-    expect(
-      reconciliationState({ ...base, reconciled: true, bexioReconciled: true }),
-    ).toBe("inBexio");
-    expect(reconciliationState({ ...base, reconciled: true })).toBe(
-      "byStatement",
-    );
-  });
-  it("à rapprocher : dans bexio, par le relevé, ou pièce à lier d'abord", () => {
-    expect(reconciliationState(base)).toBe("toReconcileInBexio");
-    expect(
-      reconciliationState({
-        ...base,
-        reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
-      }),
-    ).toBe("linkReceiptFirst");
-    expect(
-      reconciliationState({
-        ...base,
-        reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
-        expenseId: "e1",
-      }),
-    ).toBe("toReconcileByStatement");
-  });
-});
-
-describe("reconciliationState — compte inconnu", () => {
-  it("demande d'associer le compte avant tout", () => {
-    expect(
-      reconciliationState({
-        reconciled: null,
-        bexioReconciled: false,
-        reconciliation: null,
-        expenseId: null,
-        paymentAccountId: null,
-      }),
-    ).toBe("unknownAccount");
   });
 });

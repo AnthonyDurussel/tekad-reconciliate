@@ -16,6 +16,8 @@ export const API_TAG_TYPES = [
   "ExpenseCategory",
   "Expense",
   "Candidates",
+  "ReceiptCandidates",
+  "BexioCandidates",
   "RevolutTransaction",
   "Dashboard",
   "Sync",

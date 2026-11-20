@@ -1,8 +1,4 @@
-import {
-  ReconciliationModeDTO,
-  type BexioExpenseDetailDTO,
-  type BexioExpenseDTO,
-} from "@repo/models";
+import type { BexioExpenseDetailDTO, ExpenseDTO } from "@repo/models";
 
 /** Comment afficher un fichier : image, sinon dans un cadre (PDF, inconnu). */
 export type PreviewKind = "image" | "frame";
@@ -11,7 +7,7 @@ export function previewKind(mimeType: string | null | undefined): PreviewKind {
   return mimeType?.toLowerCase().startsWith("image/") ? "image" : "frame";
 }
 
-/** Un fichier à prévisualiser : joint dans bexio, ou celui de la pièce liée. */
+/** Un fichier à prévisualiser : joint dans bexio, ou la pièce de la dépense. */
 export interface PreviewFile {
   key: string;
   url: string;
@@ -21,8 +17,8 @@ export interface PreviewFile {
 }
 
 /**
- * Les fichiers de la dépense : ses fichiers joints dans bexio ; à défaut, le
- * fichier de la pièce liée ; sinon rien.
+ * Les fichiers de la dépense bexio : ses fichiers joints dans bexio ; à
+ * défaut, la pièce de la dépense rattachée (si elle en a une) ; sinon rien.
  */
 export function previewFiles(
   detail: Pick<BexioExpenseDetailDTO, "id" | "attachments" | "expenseId">,
@@ -30,7 +26,7 @@ export function previewFiles(
     attachment: (id: string, uuid: string) => string;
     expense: (expenseId: string) => string;
   },
-  linked?: { fileName: string | null; mimeType: string | null } | null,
+  linked?: Pick<ExpenseDTO, "receiptId" | "fileName" | "mimeType"> | null,
 ): PreviewFile[] {
   if (detail.attachments.length > 0) {
     return detail.attachments.map((a) => ({
@@ -40,53 +36,15 @@ export function previewFiles(
       kind: previewKind(a.mimeType),
     }));
   }
-  if (detail.expenseId) {
+  if (detail.expenseId && linked?.receiptId) {
     return [
       {
         key: `expense:${detail.expenseId}`,
         url: urls.expense(detail.expenseId),
-        name: linked?.fileName ?? null,
-        kind: previewKind(linked?.mimeType),
+        name: linked.fileName,
+        kind: previewKind(linked.mimeType),
       },
     ];
   }
   return [];
-}
-
-/** D'où vient le compte payeur, `UNKNOWN` : aucun compte retrouvé. */
-export type PaymentSourceKey =
-  NonNullable<BexioExpenseDTO["paymentAccountSource"]> | "UNKNOWN";
-
-export function paymentSourceKey(
-  expense: Pick<BexioExpenseDTO, "paymentAccountId" | "paymentAccountSource">,
-): PaymentSourceKey {
-  if (!expense.paymentAccountId) return "UNKNOWN";
-  return expense.paymentAccountSource ?? "ACCOUNT_NO";
-}
-
-/** État du rapprochement d'une dépense, pour le libellé et la marche à suivre. */
-export type ReconciliationState =
-  | "inBexio"
-  | "byStatement"
-  | "toReconcileInBexio"
-  | "toReconcileByStatement"
-  | "linkReceiptFirst"
-  | "unknownAccount"
-  | "notRequired";
-
-export function reconciliationState(
-  expense: Pick<
-    BexioExpenseDTO,
-    "reconciled" | "bexioReconciled" | "reconciliation" | "expenseId"
-  > & { paymentAccountId?: string | null },
-): ReconciliationState {
-  // Compte payeur inconnu : on ne sait pas encore s'il faut rapprocher.
-  if (expense.reconciled === null && expense.paymentAccountId === null)
-    return "unknownAccount";
-  if (expense.reconciled === null) return "notRequired";
-  if (expense.reconciled)
-    return expense.bexioReconciled ? "inBexio" : "byStatement";
-  if (expense.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT)
-    return expense.expenseId ? "toReconcileByStatement" : "linkReceiptFirst";
-  return "toReconcileInBexio";
 }

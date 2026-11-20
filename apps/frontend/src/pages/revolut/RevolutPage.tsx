@@ -21,6 +21,8 @@ import {
   IconBan,
   IconCopy,
   IconCreditCard,
+  IconExternalLink,
+  IconPlus,
   IconReceiptOff,
   IconRestore,
   IconSearch,
@@ -40,6 +42,7 @@ import RevolutImportButton from "@/components/revolut/RevolutImportButton";
 import { importableAccounts } from "@/components/revolut/statementAccounts";
 import IgnoreModal from "@/components/expense/IgnoreModal";
 import usePermissions from "@/hooks/usePermissions";
+import useCreateExpense from "@/hooks/useCreateExpense";
 import {
   useGetPaymentAccountsQuery,
   useGetRevolutTransactionsQuery,
@@ -61,8 +64,9 @@ const TABS: Tab[] = ["all", "missing", "matched", "ignored"];
 /**
  * Les relevés importés (Revolut Business, Revolut compte personnel…), filtrés
  * au besoin par compte (côté client, sur `paymentAccountId`). L'onglet
- * « Pièces manquantes » liste les sorties sans pièce ni dispense : ce qu'il
- * faut demander, à copier d'un clic.
+ * « Pièces manquantes » liste les sorties sans dépense, ou dont la dépense
+ * n'a pas de pièce : ce qu'il faut demander, à copier d'un clic ; « Créer
+ * une dépense » en fait une dépense (sans pièce) tout de suite.
  */
 export default function RevolutPage() {
   const { t } = useTranslation();
@@ -123,6 +127,7 @@ export default function RevolutPage() {
     useIgnoreRevolutTransactionMutation();
   const [restore] = useRestoreRevolutTransactionMutation();
   const [ignoring_, setIgnoring] = useState<RevolutTransactionDTO | null>(null);
+  const create = useCreateExpense();
 
   const totals = totalsByCurrency(transactions);
 
@@ -257,6 +262,9 @@ export default function RevolutPage() {
                   tx={tx}
                   accounts={accounts}
                   canManage={canManage}
+                  missingTab={tab === "missing"}
+                  creating={create.pendingTransactionId === tx.id}
+                  onCreate={() => create.fromTransaction(tx.id)}
                   onIgnore={() => setIgnoring(tx)}
                   onRestore={() => doRestore(tx)}
                 />
@@ -316,12 +324,19 @@ function TransactionRow({
   tx,
   accounts,
   canManage,
+  missingTab,
+  creating,
+  onCreate,
   onIgnore,
   onRestore,
 }: {
   tx: RevolutTransactionDTO;
   accounts: PaymentAccountDTO[];
   canManage: boolean;
+  /** Onglet « Pièces manquantes » : une dépense liée y est sans pièce. */
+  missingTab: boolean;
+  creating: boolean;
+  onCreate: () => void;
   onIgnore: () => void;
   onRestore: () => void;
 }) {
@@ -369,9 +384,19 @@ function TransactionRow({
       </Table.Td>
       <Table.Td>
         {tx.expenseId ? (
-          <Anchor component={Link} to={`/expenses/${tx.expenseId}`} size="sm">
-            {t("revolut.openReceipt")}
-          </Anchor>
+          <Group gap={6} wrap="nowrap">
+            <Anchor component={Link} to={`/expenses/${tx.expenseId}`} size="sm">
+              <Group gap={4} wrap="nowrap">
+                {t("revolut.openExpense")}
+                <IconExternalLink size={14} />
+              </Group>
+            </Anchor>
+            {missingTab && (
+              <Badge size="sm" variant="light" color="red">
+                {t("revolut.noReceipt")}
+              </Badge>
+            )}
+          </Group>
         ) : tx.ignored ? (
           <Stack gap={0}>
             <Badge size="sm" variant="light" color="gray">
@@ -384,9 +409,22 @@ function TransactionRow({
             )}
           </Stack>
         ) : tx.requiresReceipt ? (
-          <Badge size="sm" variant="light" color="red">
-            {t("revolut.missing")}
-          </Badge>
+          <Group gap={6} wrap="nowrap">
+            <Badge size="sm" variant="light" color="red">
+              {t("revolut.missing")}
+            </Badge>
+            {canManage && (
+              <Button
+                size="compact-xs"
+                variant="light"
+                leftSection={<IconPlus size={12} />}
+                loading={creating}
+                onClick={onCreate}
+              >
+                {t("revolut.createExpense")}
+              </Button>
+            )}
+          </Group>
         ) : (
           <Text size="xs" c="dimmed">
             {t("revolut.notRequired")}

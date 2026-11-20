@@ -24,12 +24,13 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   BookingModeDTO,
   ExpenseStatusDTO,
-  PaymentAccountKindDTO,
   PermissionDTO,
+  ReconciliationModeDTO,
   type ExpenseDTO,
 } from "@repo/models";
 import Page from "@/components/Page";
 import PageHeader from "@/components/PageHeader/PageHeader";
+import ExpenseOriginBadge from "@/components/expense/ExpenseOriginBadge";
 import ExpenseStatusBadge from "@/components/expense/ExpenseStatusBadge";
 import IgnoreModal from "@/components/expense/IgnoreModal";
 import usePermissions from "@/hooks/usePermissions";
@@ -49,6 +50,8 @@ import ReceiptPreview from "./detail/ReceiptPreview";
 import ExpenseForm from "./detail/ExpenseForm";
 import BookingCard from "./detail/BookingCard";
 import RevolutCard from "./detail/RevolutCard";
+import BexioCard from "./detail/BexioCard";
+import { expenseLabel } from "./expenseLinks";
 
 /** Ce que le formulaire affiche : s'il change côté serveur, il repart de là. */
 const formVersion = (e: ExpenseDTO) =>
@@ -73,9 +76,11 @@ const formVersion = (e: ExpenseDTO) =>
   ]);
 
 /**
- * Une pièce : le fichier à gauche ; à droite ses champs (corrigeables), son
- * imputation bexio, son rapprochement Revolut et les actions — relire,
- * comptabiliser, ignorer.
+ * Une dépense : sa pièce à gauche (aperçu, « Détacher » ; sinon « Rattacher
+ * une pièce ») ; à droite ses champs (corrigeables), son imputation, sa
+ * dépense bexio (rattachée, à rattacher ou à créer en comptabilisant), son
+ * rapprochement avec le relevé si son compte l'exige, et les actions —
+ * relire, comptabiliser, ignorer.
  */
 export default function ExpenseDetailPage() {
   const { t } = useTranslation();
@@ -131,11 +136,10 @@ export default function ExpenseDetailPage() {
   const status = expense.status;
   const booked = status === ExpenseStatusDTO.BOOKED;
   const ignored = status === ExpenseStatusDTO.IGNORED;
-  const account = accounts.find((a) => a.id === expense.paymentAccountId);
-  const showRevolut =
+  const showReconciliation =
     !!expense.transactionId ||
-    !account ||
-    account.kind === PaymentAccountKindDTO.REVOLUT;
+    expense.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT;
+  const hasReceipt = !!expense.receiptId;
   const reconciliationMode =
     expense.booking.mode === BookingModeDTO.BEXIO_RECONCILIATION;
 
@@ -162,7 +166,7 @@ export default function ExpenseDetailPage() {
 
   const actions = (
     <>
-      {canManage && !booked && !ignored && (
+      {canManage && hasReceipt && !booked && !ignored && (
         <Button
           variant="default"
           leftSection={<IconScan size={16} />}
@@ -243,15 +247,24 @@ export default function ExpenseDetailPage() {
     <Page maxWidth={1600}>
       <PageHeader
         icon={<IconReceipt size={22} stroke={1.7} />}
-        title={expense.merchant ?? expense.fileName}
+        title={expenseLabel(expense) ?? t("expenseDetail.title")}
         subtitle={[
           formatDate(expense.date),
           formatAmount(expense.totalAmount, expense.currency),
-          t("expenseDetail.imported", {
-            date: formatDateTime(expense.importedAt),
-          }),
+          expense.importedAt
+            ? t("expenseDetail.imported", {
+                date: formatDateTime(expense.importedAt),
+              })
+            : t("expenseDetail.created", {
+                date: formatDateTime(expense.createdAt),
+              }),
         ].join(" · ")}
-        badge={<ExpenseStatusBadge status={status} size="lg" />}
+        badge={
+          <Group gap={6}>
+            <ExpenseStatusBadge status={status} size="lg" />
+            <ExpenseOriginBadge source={expense.source} size="lg" />
+          </Group>
+        }
         onBack={back}
         backLabel={t("expenseDetail.back")}
         actions={actions}
@@ -263,7 +276,7 @@ export default function ExpenseDetailPage() {
       )}
       <Grid gap="lg">
         <Grid.Col span={{ base: 12, lg: 5 }}>
-          <ReceiptPreview expense={expense} />
+          <ReceiptPreview expense={expense} canManage={canManage} />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <Stack gap="lg">
@@ -275,10 +288,11 @@ export default function ExpenseDetailPage() {
               readOnly={!canManage || booked}
             />
             <BookingCard expense={expense} />
-            {showRevolut && (
+            <BexioCard expense={expense} canManage={canManage} />
+            {showReconciliation && (
               <RevolutCard expense={expense} canManage={canManage} />
             )}
-            {!expense.extractedAt && (
+            {hasReceipt && !expense.extractedAt && (
               <Group gap="xs">
                 <IconInfoCircle size={16} />
                 <Text size="sm" c="dimmed">

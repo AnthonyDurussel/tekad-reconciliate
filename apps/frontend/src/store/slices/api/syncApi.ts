@@ -6,6 +6,8 @@ const AFFECTED = [
   "Sync",
   "Expense",
   "Candidates",
+  "ReceiptCandidates",
+  "BexioCandidates",
   "RevolutTransaction",
   "Dashboard",
   "BexioExpense",

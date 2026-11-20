@@ -1,158 +1,64 @@
 import { describe, expect, it } from "vitest";
-import {
-  BexioExpenseIssueDTO,
-  ExpenseStatusDTO,
-  type BexioExpenseDTO,
-  type ExpenseDTO,
-} from "@repo/models";
-import {
-  candidateWindow,
-  filterByIssue,
-  matchesCandidateSearch,
-  parseIssueFilter,
-  rankCandidates,
-  summarize,
-} from "./bexioExpenses";
+import { ReconciliationModeDTO, type BexioExpenseDTO } from "@repo/models";
+import { reconciliationState, summarize } from "./bexioExpenses";
 
-const bexio = (patch: Partial<BexioExpenseDTO>): BexioExpenseDTO => ({
+const expense = (patch: Partial<BexioExpenseDTO> = {}): BexioExpenseDTO => ({
   id: "b1",
   documentNo: "AU-00001",
   title: null,
   vendor: "Migros",
   status: "DONE",
-  paidOn: "2026-10-10",
-  gross: 50,
+  paidOn: "2026-10-01",
+  gross: 10,
   currency: "CHF",
   bookingAccountNo: "6500",
   bookingAccountName: "Frais de bureau",
-  bankAccountId: null,
-  bankAccountNo: null,
-  bankAccountName: null,
-  paymentAccountId: "acc",
-  paymentAccountName: "UBS",
-  paymentAccountSource: null,
-  reconciliation: null,
-  attachmentCount: 0,
-  expenseId: null,
-  expenseFileName: null,
+  bankAccountNo: "1021",
+  bankAccountName: "Revolut",
+  paymentAccountId: "p1",
+  paymentAccountName: "Revolut Business",
+  reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
   bexioReconciled: false,
-  statementTransactionId: null,
-  reconciled: null,
-  issues: [],
-  syncedAt: "2026-10-11T00:00:00Z",
+  attachmentIds: [],
+  expenseId: null,
   ...patch,
 });
 
-const receipt = (patch: Partial<ExpenseDTO>): ExpenseDTO =>
-  ({
-    id: "e1",
-    status: ExpenseStatusDTO.READY,
-    fileName: "ticket.pdf",
-    date: "2026-10-10",
-    merchant: "Migros",
-    description: null,
-    totalAmount: 50,
-    currency: "CHF",
-    paymentAccountName: null,
-    bexioExpenseId: null,
-    booking: { amountChf: null },
-    ...patch,
-  }) as ExpenseDTO;
-
-describe("issue filter", () => {
-  const rows = [
-    bexio({ id: "ok" }),
-    bexio({ id: "missing", issues: [BexioExpenseIssueDTO.MISSING_RECEIPT] }),
-    bexio({
-      id: "both",
-      issues: [
-        BexioExpenseIssueDTO.MISSING_RECEIPT,
-        BexioExpenseIssueDTO.NOT_RECONCILED,
-      ],
-    }),
-    bexio({ id: "draft", issues: [BexioExpenseIssueDTO.DRAFT], gross: 7 }),
-  ];
-  const ids = (list: BexioExpenseDTO[]) => list.map((e) => e.id);
-
-  it("« à traiter » garde toute dépense avec un problème", () => {
-    expect(ids(filterByIssue(rows, "todo"))).toEqual([
-      "missing",
-      "both",
-      "draft",
-    ]);
-  });
-  it("filtre par problème, ou sans problème", () => {
-    expect(
-      ids(filterByIssue(rows, BexioExpenseIssueDTO.MISSING_RECEIPT)),
-    ).toEqual(["missing", "both"]);
-    expect(
-      ids(filterByIssue(rows, BexioExpenseIssueDTO.NOT_RECONCILED)),
-    ).toEqual(["both"]);
-    expect(ids(filterByIssue(rows, "ok"))).toEqual(["ok"]);
-    expect(filterByIssue(rows, "all")).toHaveLength(4);
-  });
-  it("lit le filtre de l'URL", () => {
-    expect(parseIssueFilter("todo")).toBe("todo");
-    expect(parseIssueFilter("MISSING_RECEIPT")).toBe(
-      BexioExpenseIssueDTO.MISSING_RECEIPT,
-    );
-    expect(parseIssueFilter("DRAFT")).toBe("all");
-    expect(parseIssueFilter(null)).toBe("all");
-  });
-  it("résume nombres et montants CHF", () => {
+describe("summarize", () => {
+  it("compte toutes, rattachées et non rattachées, en CHF seulement", () => {
     const summary = summarize([
-      ...rows,
-      bexio({ id: "eur", currency: "EUR", gross: 100 }),
+      expense({ id: "1", gross: 10, expenseId: "e1" }),
+      expense({ id: "2", gross: 20.5 }),
+      expense({ id: "3", gross: 99, currency: "EUR" }),
     ]);
-    expect(summary.all).toEqual({ count: 5, amountChf: 157 });
-    expect(summary.missingReceipt).toEqual({ count: 2, amountChf: 100 });
-    expect(summary.notReconciled).toEqual({ count: 1, amountChf: 50 });
-    expect(summary.ok).toEqual({ count: 2, amountChf: 50 });
+    expect(summary.all).toEqual({ count: 3, amountChf: 30.5 });
+    expect(summary.linked).toEqual({ count: 1, amountChf: 10 });
+    expect(summary.unlinked).toEqual({ count: 2, amountChf: 20.5 });
+  });
+
+  it("vide : des zéros", () => {
+    expect(summarize([]).all).toEqual({ count: 0, amountChf: 0 });
   });
 });
 
-describe("rankCandidates", () => {
-  it("écarte les pièces ignorées ou déjà liées, trie par montant puis date", () => {
-    const ranked = rankCandidates(bexio({ gross: 50, paidOn: "2026-10-10" }), [
-      receipt({ id: "far-amount", totalAmount: 80 }),
-      receipt({ id: "ignored", status: ExpenseStatusDTO.IGNORED }),
-      receipt({ id: "linked", bexioExpenseId: "other" }),
-      receipt({ id: "late", date: "2026-10-15" }),
-      receipt({ id: "exact" }),
-      receipt({ id: "no-amount", totalAmount: null }),
-      receipt({
-        id: "chf",
-        totalAmount: 52,
-        currency: "EUR",
-        booking: { amountChf: 50 } as ExpenseDTO["booking"],
-        date: "2026-10-12",
-      }),
-    ]);
-    expect(ranked.map((c) => c.expense.id)).toEqual([
-      "exact",
-      "chf",
-      "late",
-      "far-amount",
-      "no-amount",
-    ]);
-    expect(ranked[0]).toMatchObject({ amountGap: 0, dayGap: 0 });
-    expect(ranked[3].amountGap).toBe(30);
-    expect(ranked[4].amountGap).toBeNull();
+describe("reconciliationState", () => {
+  it("rapprochée dans bexio d'abord", () => {
+    expect(
+      reconciliationState(
+        expense({
+          bexioReconciled: true,
+          reconciliation: ReconciliationModeDTO.STATEMENT_IMPORT,
+        }),
+      ),
+    ).toBe("inBexio");
   });
 
-  it("cherche dans le fichier et le commerçant", () => {
-    const r = receipt({ fileName: "Facture-Swisscom.pdf", merchant: null });
-    expect(matchesCandidateSearch(r, "swisscom")).toBe(true);
-    expect(matchesCandidateSearch(r, "coop")).toBe(false);
-    expect(matchesCandidateSearch(r, "  ")).toBe(true);
-  });
-
-  it("cherche ±10 jours autour du paiement", () => {
-    const fallback = { from: "2026-01-01", to: "2026-12-31" };
-    expect(candidateWindow("2026-10-05", fallback)).toEqual({
-      from: "2026-09-25",
-      to: "2026-10-15",
-    });
-    expect(candidateWindow(null, fallback)).toBe(fallback);
+  it("sinon selon le compte payeur", () => {
+    const of = (reconciliation: ReconciliationModeDTO | null) =>
+      reconciliationState(expense({ reconciliation }));
+    expect(of(ReconciliationModeDTO.BEXIO)).toBe("toReconcileInBexio");
+    expect(of(ReconciliationModeDTO.STATEMENT_IMPORT)).toBe("byStatement");
+    expect(of(ReconciliationModeDTO.NONE)).toBe("notRequired");
+    expect(of(null)).toBe("unknownAccount");
   });
 });

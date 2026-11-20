@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Anchor,
-  Button,
   Card,
   Group,
   Image,
@@ -13,25 +12,20 @@ import {
 import {
   IconExternalLink,
   IconFile,
-  IconLink,
   IconReceiptOff,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import type { PreviewFile } from "./bexioExpenseDetail";
 
 /**
- * La pièce de la dépense bexio : ses fichiers joints (un onglet par fichier
- * quand il y en a plusieurs), sinon le fichier de la pièce liée, sinon un
- * état vide avec « Lier une pièce ».
+ * Les fichiers de la dépense bexio : ses fichiers joints (un onglet par
+ * fichier quand il y en a plusieurs), sinon la pièce de la dépense
+ * rattachée, sinon un état vide.
  */
 export default function BexioExpensePreview({
   files,
-  canLink,
-  onLink,
 }: {
   files: PreviewFile[];
-  canLink: boolean;
-  onLink: () => void;
 }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string | null>(null);
@@ -49,11 +43,6 @@ export default function BexioExpensePreview({
           <Text size="sm" c="dimmed" ta="center" maw={360}>
             {t("bexioExpenseDetail.preview.emptyText")}
           </Text>
-          {canLink && (
-            <Button leftSection={<IconLink size={16} />} onClick={onLink}>
-              {t("bexioExpenses.link.action")}
-            </Button>
-          )}
         </Stack>
       </Card>
     );

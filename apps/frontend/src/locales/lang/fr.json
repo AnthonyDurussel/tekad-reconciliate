@@ -64,7 +64,7 @@
   },
   "nav": {
     "dashboard": "Tableau de bord",
-    "expenses": "Pièces",
+    "expenses": "Dépenses",
     "bexioExpenses": "Dépenses bexio",
     "revolut": "Relevés",
     "admin": {
@@ -92,11 +92,11 @@
     "noReference": "pas de référence",
     "vsPrevious": "vs période préc.",
     "title": "Tableau de bord",
-    "subtitle": "Où en sont les pièces de la période, ce qu'elles pèsent, ce qui manque.",
+    "subtitle": "Où en sont les dépenses de la période, ce qui leur manque, ce qu'elles pèsent.",
     "missing": "Pièces manquantes",
     "missingHint": "{{amount}} de sorties sans pièce",
     "statusHint": {
-      "NEW": "importées, pas encore lues",
+      "NEW": "pièces importées, pas encore lues",
       "TO_REVIEW": "il manque un compte, un type ou la transaction",
       "READY": "prêtes à comptabiliser",
       "BOOKED": "passées dans bexio",
@@ -104,14 +104,20 @@
     },
     "byAccount": "Par compte de paiement",
     "byCategory": "Par type de dépense",
-    "byCategoryHint": "Montants en CHF des pièces de la période, hors pièces ignorées.",
+    "byCategoryHint": "Montants en CHF des dépenses de la période, hors dépenses ignorées.",
     "periodTotal": "Du {{from}} au {{to}} · {{total}}",
     "total": "total",
-    "receipts_one": "{{count}} pièce",
-    "receipts_other": "{{count}} pièces",
-    "bexioTodo": "Dépenses bexio à traiter",
-    "bexioTodoHint_one": "sur {{count}} dépense bexio (pièce, rapprochement)",
-    "bexioTodoHint_other": "sur {{count}} dépenses bexio (pièce, rapprochement)"
+    "receipts_one": "{{count}} dépense",
+    "receipts_other": "{{count}} dépenses",
+    "issues": {
+      "title": "À faire",
+      "subtitle": "Dépenses de la période à compléter : un clic ouvre la liste.",
+      "hint": {
+        "missingReceipt": "pièce à rattacher ou à demander",
+        "notInBexio": "à comptabiliser ou à rattacher dans bexio",
+        "notReconciled": "transaction du relevé à choisir"
+      }
+    }
   },
   "sync": {
     "title": "Synchronisation",
@@ -141,8 +147,8 @@
     "revolutNone": "Aucun relevé importé"
   },
   "expenses": {
-    "title": "Pièces",
-    "subtitle": "Les pièces de l'inbox bexio : compte de paiement, type, imputation et rapprochement.",
+    "title": "Dépenses",
+    "subtitle": "Chaque dépense : sa pièce, sa dépense bexio et, si son compte l'exige, sa transaction du relevé.",
     "export": "Exporter (Excel)",
     "allAccounts": "Tous",
     "unclassified": "Non classé",
@@ -158,23 +164,49 @@
     "category": "Type de dépense",
     "booking": "Imputation",
     "status": "Statut",
-    "revolut": "Revolut",
-    "matched": "Rapprochée d'une transaction Revolut",
+    "matched": "Rapprochée d'une transaction du relevé",
     "notMatched": "Pas encore rapprochée",
-    "bexioEntry": "Écriture bexio n° {{id}}",
-    "empty": "Aucune pièce pour ces filtres.",
-    "total_one": "Total · {{count}} pièce",
-    "total_other": "Total · {{count}} pièces",
-    "unpriced_one": "{{count}} pièce sans montant en CHF n'est pas comptée.",
-    "unpriced_other": "{{count}} pièces sans montant en CHF ne sont pas comptées."
+    "empty": "Aucune dépense pour ces filtres.",
+    "total_one": "Total · {{count}} dépense",
+    "total_other": "Total · {{count}} dépenses",
+    "unpriced_one": "{{count}} dépense sans montant en CHF n'est pas comptée.",
+    "unpriced_other": "{{count}} dépenses sans montant en CHF ne sont pas comptées.",
+    "noMerchant": "Sans libellé",
+    "linksTitle": "Pièce · bexio · relevé",
+    "allIssues": "À faire : tout",
+    "issueFilter": "À faire",
+    "issueOptions": {
+      "MISSING_RECEIPT": "À faire : sans pièce",
+      "NOT_IN_BEXIO": "À faire : pas dans bexio",
+      "NOT_RECONCILED": "À faire : non rapprochée",
+      "ok": "Complètes"
+    },
+    "links": {
+      "receipt": {
+        "ok": "Pièce rattachée",
+        "missing": "Sans pièce",
+        "na": "Pièce : rien à faire"
+      },
+      "bexio": {
+        "ok": "Dans bexio",
+        "missing": "Pas dans bexio",
+        "na": "bexio : rien à faire"
+      },
+      "reconciliation": {
+        "ok": "Rapprochée d'une transaction du relevé",
+        "missing": "Non rapprochée : transaction du relevé à choisir",
+        "na": "Pas de rapprochement par relevé"
+      }
+    },
+    "createdDone": "Dépense créée."
   },
   "expenseDetail": {
-    "title": "Pièce",
-    "back": "Retour aux pièces",
-    "notFound": "Pièce introuvable.",
+    "title": "Dépense",
+    "back": "Retour aux dépenses",
+    "notFound": "Dépense introuvable.",
     "openFile": "Ouvrir",
     "imported": "importée le {{date}}",
-    "fields": "Lecture de la pièce",
+    "fields": "Dépense",
     "confidence": "Confiance de la lecture : {{value}}",
     "extractionError": "La lecture a échoué",
     "notExtracted": "Pièce pas encore lue : « Relire la pièce » la fait lire maintenant.",
@@ -198,22 +230,23 @@
     "amountChf": "Montant CHF",
     "missingTitle": "Pas encore comptabilisable",
     "missing": {
+      "receipt": "Aucune pièce n'est rattachée : rattachez-la avant de comptabiliser.",
       "date": "La date de la pièce manque.",
       "amount": "Le montant de la pièce manque.",
       "paymentAccount": "Le compte de paiement n'est pas choisi (carte non reconnue).",
       "category": "Le type de dépense n'est pas choisi.",
-      "transaction": "Payée avec Revolut : la transaction Revolut n'est pas rapprochée.",
+      "transaction": "Compte rapproché par relevé : la transaction du relevé n'est pas rapprochée.",
       "amountChf": "Le montant en CHF est inconnu (pièce en devise sans transaction Revolut).",
       "debitAccount": "Le compte de charge (débit) manque.",
       "creditAccount": "Le compte bexio du compte de paiement (crédit) manque."
     },
-    "readyToBook": "Tout y est : la pièce peut être comptabilisée.",
+    "readyToBook": "Tout y est : la dépense peut être comptabilisée.",
     "bookedEntry": "Écriture bexio n° {{id}} passée le {{date}}, pièce jointe.",
     "bookedReconciliation": "Marquée comptabilisée le {{date}} (rapprochement bancaire dans bexio).",
-    "revolutTitle": "Rapprochement Revolut",
-    "noCandidates": "Aucune transaction Revolut ne correspond (montant, ± 5 jours).",
+    "revolutTitle": "Rapprochement avec le relevé",
+    "noCandidates": "Aucune transaction du relevé ne correspond (montant, ± 5 jours).",
     "candidatesHint": "Transactions classées par note : le montant est obligatoire ; la date, la carte et le commerçant départagent. Rapprochement automatique dès {{score}} points.",
-    "alreadyMatched": "déjà rapprochée d'une autre pièce",
+    "alreadyMatched": "déjà rapprochée d'une autre dépense",
     "reasons": {
       "amount": "montant",
       "sameDay": "même jour",
@@ -224,35 +257,79 @@
     },
     "match": "Rapprocher",
     "unmatch": "Détacher",
-    "matchedDone": "Pièce rapprochée.",
+    "matchedDone": "Dépense rapprochée.",
     "unmatchedDone": "Transaction détachée.",
     "lockedHint": "Annulez d'abord la comptabilisation.",
     "extract": "Relire la pièce",
     "extractedDone": "Pièce relue.",
     "book": "Comptabiliser",
     "markBooked": "Marquer comptabilisée (rapprochement dans bexio)",
-    "bookDisabled": "La pièce n'est pas prête : voir ce qui manque.",
+    "bookDisabled": "La dépense n'est pas prête : voir ce qui manque.",
     "bookedDone": "Écriture passée dans bexio.",
-    "markedBookedDone": "Pièce marquée comptabilisée.",
+    "markedBookedDone": "Dépense marquée comptabilisée.",
     "unbook": "Annuler la comptabilisation",
     "unbookTitle": "Annuler la comptabilisation",
-    "unbookConfirm": "La pièce redevient à comptabiliser. Rien n'est changé dans bexio.",
-    "unbookConfirmEntry": "La pièce redevient à comptabiliser. Supprimez aussi l'écriture n° {{id}} dans bexio si elle doit disparaître.",
+    "unbookConfirm": "La dépense redevient à comptabiliser. Rien n'est changé dans bexio.",
+    "unbookConfirmEntry": "La dépense redevient à comptabiliser. Supprimez aussi l'écriture n° {{id}} dans bexio si elle doit disparaître.",
     "unbookedDone": "Comptabilisation annulée.",
     "ignore": "Ignorer",
-    "ignoreTitle": "Ignorer la pièce",
-    "ignoreHint": "Une pièce ignorée sort des listes et des totaux ; elle se restaure à tout moment.",
+    "ignoreTitle": "Ignorer la dépense",
+    "ignoreHint": "Une dépense ignorée sort des listes et des totaux ; elle se restaure à tout moment.",
     "ignoreReasons": {
       "duplicate": "Doublon",
       "private": "Dépense privée",
       "notExpense": "Pas une dépense (facture client, document)"
     },
-    "ignoredDone": "Pièce ignorée.",
-    "ignoredHint": "Pièce ignorée : elle n'entre ni dans les totaux ni dans la comptabilité.",
+    "ignoredDone": "Dépense ignorée.",
+    "ignoredHint": "Dépense ignorée : elle n'entre ni dans les totaux ni dans la comptabilité.",
     "restore": "Restaurer",
-    "restoredDone": "Pièce restaurée.",
-    "bexioExpense": "Dépense bexio liée",
-    "bexioExpenseHint": "Dépense bexio {{id}} : la pièce y est jointe."
+    "restoredDone": "Dépense restaurée.",
+    "created": "créée le {{date}}",
+    "receiptCard": {
+      "title": "Pièce",
+      "none": "Aucune pièce rattachée",
+      "noneHint": "Rattachez la pièce reçue (ticket, facture) : si la dépense est déjà dans bexio, le fichier y sera joint.",
+      "link": "Rattacher une pièce",
+      "linkedDone": "Pièce rattachée.",
+      "unlink": "Détacher",
+      "unlinkHint": "La pièce redevient une dépense à part.",
+      "unlinkTitle": "Détacher la pièce ?",
+      "unlinkConfirm": "La pièce « {{file}} » redevient une dépense à part. Si elle a été jointe dans bexio, le fichier y reste.",
+      "unlinkedDone": "Pièce détachée."
+    },
+    "receiptModal": {
+      "title": "Rattacher une pièce",
+      "hint": "Pièces sans dépense, ou seules sur leur dépense (celle-ci disparaît une fois la pièce rattachée) ; les plus proches du montant en tête.",
+      "search": "Rechercher une pièce (commerçant, fichier, montant)",
+      "none": "Aucune pièce candidate.",
+      "sameAmount": "même montant",
+      "notRead": "pas encore lue",
+      "ownExpense": "a sa propre dépense",
+      "previewHint": "Choisissez une pièce pour la voir.",
+      "confirm": "Rattacher cette pièce"
+    },
+    "bexioCard": {
+      "title": "Dépense bexio",
+      "inBexio": "Dans bexio",
+      "noneHint": "« Comptabiliser » crée la dépense dans bexio. Si elle y est déjà saisie, rattachez-la : le fichier de la pièce y sera joint.",
+      "entry": "Écriture manuelle bexio n° {{id}}.",
+      "link": "Rattacher une dépense bexio",
+      "linkedDone": "Dépense bexio rattachée.",
+      "open": "Ouvrir la dépense bexio",
+      "unlink": "Détacher",
+      "unlinkTitle": "Détacher la dépense bexio ?",
+      "unlinkConfirm": "Le lien est retiré ici seulement : la dépense {{no}} et ses fichiers restent dans bexio.",
+      "unlinkedDone": "Dépense bexio détachée.",
+      "notConfigured": "bexio n'est pas configuré : la dépense bexio ne peut pas être lue.",
+      "unavailable": "Dépense bexio {{id}} : lecture impossible ({{message}})."
+    },
+    "bexioModal": {
+      "title": "Rattacher une dépense bexio",
+      "hint": "Dépenses bexio non rattachées, payées à ± 10 jours de la dépense ({{subject}}), les plus proches en tête. Le fichier de la pièce y sera joint et la dépense deviendra comptabilisée.",
+      "none": "Aucune dépense bexio candidate.",
+      "confirm": "Rattacher",
+      "notConfigured": "bexio n'est pas configuré : rattachement impossible."
+    }
   },
   "revolut": {
     "title": "Relevés",
@@ -264,8 +341,7 @@
       "matched": "Rapprochées",
       "ignored": "Ignorées"
     },
-    "receipt": "Pièce",
-    "openReceipt": "Voir la pièce",
+    "receipt": "Dépense",
     "missing": "Pièce manquante",
     "notRequired": "pas de pièce requise",
     "ignored": "Pas de pièce",
@@ -280,7 +356,7 @@
     },
     "missingTitle_one": "{{count}} pièce à demander",
     "missingTitle_other": "{{count}} pièces à demander",
-    "missingText": "Sorties sans pièce ni dispense : {{total}}.",
+    "missingText": "Sorties sans dépense, ou dont la dépense n'a pas de pièce : {{total}}.",
     "missingNone": "Toutes les sorties importées de la période ont leur pièce.",
     "copy": "Copier la liste",
     "copied": "Liste copiée dans le presse-papiers.",
@@ -301,87 +377,53 @@
       "tax": "Taxe",
       "charge": "Frais"
     },
-    "allAccounts": "Tous les comptes"
+    "allAccounts": "Tous les comptes",
+    "openExpense": "Ouvrir la dépense",
+    "noReceipt": "sans pièce",
+    "createExpense": "Créer une dépense"
   },
   "bexioExpenses": {
     "title": "Dépenses bexio",
-    "subtitle": "Chaque dépense saisie dans bexio doit avoir sa pièce et, si son compte l’exige, être rapprochée.",
-    "sync": "Synchroniser avec bexio",
-    "lastSync": "Synchronisé le {{date}}",
-    "neverSynced": "Jamais synchronisé",
-    "notConfigured": "bexio n’est pas configuré (BEXIO_API_TOKEN) : la synchronisation est impossible.",
-    "emptyTitle": "Aucune synchronisation des dépenses bexio",
-    "emptyText": "Lancez une première synchronisation pour lire les dépenses saisies dans bexio et vérifier leurs pièces et leur rapprochement.",
+    "subtitle": "Les dépenses saisies dans bexio, lues en direct : chacune devrait avoir sa dépense dans l'application.",
+    "sync": "Rattacher automatiquement",
+    "syncHint": "Rattache les dépenses dont la pièce est jointe dans bexio, détache celles qui ont disparu de bexio.",
+    "lastSync": "Dernier rattachement le {{date}}",
+    "notConfigured": "bexio n'est pas configuré (BEXIO_API_TOKEN) : les dépenses bexio ne peuvent pas être lues.",
+    "notConfiguredShort": "bexio n'est pas configuré.",
     "empty": "Aucune dépense bexio pour ces filtres.",
-    "search": "Fournisseur, titre, n°…",
-    "unknownAccount": "Compte inconnu",
+    "search": "Fournisseur…",
+    "unlinkedOnly": "Non rattachées seulement",
     "paidOn": "Payée le",
     "documentNo": "N°",
     "vendor": "Fournisseur / titre",
     "bookingAccount": "Compte de charge",
     "paymentAccount": "Compte payeur",
-    "receipt": "Pièce",
+    "attachments": "Fichiers",
     "reconciliation": "Rapprochement",
-    "issues": "À faire",
+    "expense": "Dépense",
     "draft": "Brouillon",
-    "ok": "OK",
-    "openReceipt": "Ouvrir la pièce",
-    "attached_one": "{{count}} jointe dans bexio",
-    "attached_other": "{{count}} jointes dans bexio",
-    "missing": "Manquante",
-    "notRequired": "Non requis",
-    "reconciled": "Rapprochée",
-    "reconciledInBexio": "dans bexio",
-    "reconciledStatement": "par le relevé importé",
-    "toReconcile": "À rapprocher",
-    "reconcile": "Rapprocher",
-    "linkFirst": "liez d’abord une pièce",
-    "reconcileInBexio": "à rapprocher dans bexio",
-    "reconciliationMode": {
-      "BEXIO": "Dans bexio",
-      "STATEMENT_IMPORT": "Import",
-      "NONE": "Sans relevé"
+    "linked": "Rattachée",
+    "unlinked": "Non rattachée",
+    "openExpense": "Ouvrir la dépense",
+    "create": "Créer la dépense",
+    "attached_one": "{{count}} fichier joint",
+    "attached_other": "{{count}} fichiers joints",
+    "noAttachment": "Aucun fichier joint dans bexio.",
+    "noAttachmentShort": "aucun",
+    "reconciledInBexio": "Rapprochée dans bexio",
+    "notReconciledInBexio": "Pas rapprochée dans bexio",
+    "reconciliationState": {
+      "inBexio": "Rapprochée dans bexio",
+      "toReconcileInBexio": "À rapprocher dans bexio",
+      "byStatement": "Par le relevé",
+      "notRequired": "Non requis",
+      "unknownAccount": "Compte inconnu"
     },
     "tiles": {
-      "all": "Dépenses",
-      "missingReceipt": "Sans pièce",
-      "notReconciled": "À rapprocher",
-      "ok": "En ordre"
-    },
-    "filter": {
-      "all": "Toutes",
-      "todo": "À traiter",
-      "MISSING_RECEIPT": "Sans pièce",
-      "NOT_RECONCILED": "À rapprocher",
-      "ok": "OK"
-    },
-    "issue": {
-      "MISSING_RECEIPT": "Sans pièce",
-      "NOT_RECONCILED": "Non rapprochée",
-      "UNKNOWN_ACCOUNT": "Compte inconnu",
-      "DRAFT": "Brouillon"
-    },
-    "link": {
-      "action": "Lier une pièce",
-      "title": "Lier une pièce à la dépense bexio",
-      "subject": "{{no}} — {{vendor}} — payée le {{date}} — {{amount}}",
-      "hint": "Pièces du {{from}} au {{to}} (±{{days}} jours), ni ignorées ni déjà liées, les plus proches du montant en tête. Le fichier sera joint à la dépense dans bexio.",
-      "search": "Rechercher une pièce",
-      "receipt": "Pièce",
-      "sameAmount": "même montant",
-      "preview": "Voir la pièce",
-      "confirm": "Lier",
-      "none": "Aucune pièce candidate.",
-      "done": "Pièce jointe dans bexio"
-    },
-    "unlink": {
-      "action": "Délier la pièce",
-      "title": "Délier la pièce ?",
-      "confirm": "La pièce « {{file}} » ne sera plus liée à la dépense {{no}} dans l’application. Le fichier reste joint à la dépense dans bexio : retirez-le là-bas au besoin.",
-      "done": "Pièce déliée"
-    },
-    "toAssociate": "À associer",
-    "toAssociateHint": "Le compte bancaire bexio ne correspond à aucun compte de paiement : ouvrez la dépense pour l'associer."
+      "all": "Dépenses bexio",
+      "linked": "Rattachées",
+      "unlinked": "Non rattachées"
+    }
   },
   "bexioExpenseDetail": {
     "title": "Dépense bexio",
@@ -389,60 +431,31 @@
     "notFound": "Dépense bexio introuvable.",
     "preview": {
       "file": "Fichier {{n}}",
-      "emptyTitle": "Aucune pièce",
-      "emptyText": "Aucun fichier n'est joint à cette dépense dans bexio et aucune pièce n'y est liée."
+      "emptyTitle": "Aucun fichier",
+      "emptyText": "Aucun fichier n'est joint à cette dépense dans bexio et la dépense rattachée n'a pas de pièce."
     },
     "expense": {
-      "title": "Dépense bexio",
+      "title": "Dans bexio",
       "documentNo": "N°",
       "vendor": "Fournisseur",
       "titleField": "Titre",
       "status": "Statut bexio",
       "done": "Comptabilisée",
-      "syncedAt": "Dernière synchronisation"
+      "bank": "Compte bancaire payeur",
+      "paymentAccount": "Compte de paiement",
+      "noPaymentAccount": "aucun compte de paiement associé à ce compte"
     },
-    "account": {
-      "title": "Compte payeur",
-      "bank": "Compte du plan comptable bexio",
-      "noBank": "Aucun compte bancaire indiqué dans bexio",
-      "source": {
-        "MANUAL": "choisi sur cette dépense",
-        "ACCOUNT_NO": "par le compte du plan comptable associé",
-        "UNKNOWN": "inconnu : choisissez le compte de paiement"
-      },
-      "choose": "Compte de paiement",
-      "choosePlaceholder": "Choisir un compte",
-      "automatic": "Revenir à l'automatique",
-      "chartOwner": "associé au compte « {{name}} »",
-      "chartFree": "associé à aucun compte de l'application",
-      "applyToAccount": "Associer ce compte au compte du plan comptable {{no}}",
-      "applyToAccountHint": "Le compte bexio du compte de paiement devient {{no}} (il sert aussi au crédit de ses écritures) : toutes les dépenses payées depuis ce compte le suivront.",
-      "applyToAccountDisabled": "Le compte bancaire de cette dépense n'a pas de compte du plan comptable : choix pour cette dépense seulement."
+    "reconciliationHint": {
+      "inBexio": "La dépense est rapprochée d'une transaction bancaire dans bexio.",
+      "toReconcileInBexio": "Faites le rapprochement bancaire dans bexio.",
+      "byStatement": "Rapprochée ici, par la transaction du relevé importé, sur la dépense de l'application.",
+      "notRequired": "Le compte payeur n'a pas de relevé : la pièce suffit.",
+      "unknownAccount": "Aucun compte de paiement n'a ce compte bancaire : associez-le dans « Comptes et cartes »."
     },
-    "receipt": {
-      "noLinked": "Aucune pièce de l'application liée.",
-      "noAttachment": "Aucun fichier joint dans bexio"
-    },
-    "reconciliation": {
-      "state": {
-        "inBexio": "Rapprochée dans bexio",
-        "byStatement": "Rapprochée par le relevé",
-        "toReconcileInBexio": "À rapprocher",
-        "toReconcileByStatement": "À rapprocher",
-        "linkReceiptFirst": "À rapprocher",
-        "notRequired": "Non requis",
-        "unknownAccount": "Compte à associer"
-      },
-      "hint": {
-        "inBexio": "La dépense est rapprochée d'une transaction bancaire dans bexio.",
-        "byStatement": "La pièce liée est rapprochée d'une transaction du relevé importé.",
-        "toReconcileInBexio": "Compte rapproché dans bexio : faites le rapprochement bancaire dans bexio, puis resynchronisez.",
-        "toReconcileByStatement": "Compte rapproché par le relevé importé : choisissez la transaction du relevé sur la pièce liée.",
-        "linkReceiptFirst": "Compte rapproché par le relevé importé : liez d'abord une pièce, puis choisissez sa transaction.",
-        "notRequired": "Le compte payeur n'a pas de relevé : la pièce suffit.",
-        "unknownAccount": "Associez d'abord le compte payeur : le rapprochement exigé en dépend."
-      },
-      "pickTransaction": "Choisir la transaction du relevé sur la pièce"
+    "linked": {
+      "title": "Dépense de l'application",
+      "none": "Aucune dépense de l'application n'est rattachée. « Créer la dépense » reprend celle dont la pièce est jointe ici, sinon en crée une, comptabilisée.",
+      "orLink": "Ou rattachez-la depuis une dépense existante (« Rattacher une dépense bexio »)."
     }
   },
   "ignore": {
@@ -638,6 +651,21 @@
     "statementFormat": {
       "REVOLUT_BUSINESS": "Revolut Business",
       "REVOLUT_PERSONAL": "Revolut (compte personnel)"
+    },
+    "expenseSource": {
+      "RECEIPT": "Pièce",
+      "TRANSACTION": "Relevé",
+      "BEXIO": "bexio"
+    },
+    "expenseSourceHint": {
+      "RECEIPT": "Née d'une pièce de l'inbox bexio.",
+      "TRANSACTION": "Née d'une sortie du relevé importé, sans pièce.",
+      "BEXIO": "Née d'une dépense saisie dans bexio."
+    },
+    "expenseIssue": {
+      "MISSING_RECEIPT": "Sans pièce",
+      "NOT_IN_BEXIO": "Pas dans bexio",
+      "NOT_RECONCILED": "Non rapprochée"
     }
   },
   "revolutImport": {

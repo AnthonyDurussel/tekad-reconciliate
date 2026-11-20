@@ -1,16 +1,14 @@
 import { useMemo, useState, type MouseEvent } from "react";
 import {
-  ActionIcon,
   Alert,
   Anchor,
   Badge,
   Button,
   Card,
   Group,
-  SegmentedControl,
-  Select,
   SimpleGrid,
   Stack,
+  Switch,
   Table,
   Text,
   TextInput,
@@ -21,21 +19,18 @@ import { useDebouncedCallback } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
   IconCircleCheck,
+  IconExternalLink,
   IconFileInvoice,
-  IconLink,
   IconLinkOff,
   IconPaperclip,
-  IconReceiptOff,
+  IconPlus,
   IconRefresh,
   IconSearch,
-  IconTransfer,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  BexioExpenseIssueDTO,
   PermissionDTO,
-  ReconciliationModeDTO,
   SyncSourceDTO,
   type BexioExpenseDTO,
 } from "@repo/models";
@@ -44,13 +39,13 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import PeriodPicker from "@/components/PeriodPicker";
 import { StatTile, type TileIcon } from "@/components/dashboard/StatTile";
 import usePermissions from "@/hooks/usePermissions";
+import useCreateExpense from "@/hooks/useCreateExpense";
 import {
   useGetBexioExpensesQuery,
-  useGetPaymentAccountsQuery,
   useGetSyncStatusQuery,
   useRunSyncMutation,
 } from "@/store/slices/api";
-import { getErrorMessage } from "@/utils/apiError";
+import { getErrorMessage, isConflict } from "@/utils/apiError";
 import {
   formatAmount,
   formatChfPrecise,
@@ -59,62 +54,34 @@ import {
 } from "@/utils/format";
 import { lastThreeMonths, type Period } from "@/utils/period";
 import {
-  ISSUE_FILTERS,
-  filterByIssue,
-  parseIssueFilter,
+  STATE_COLOR,
+  reconciliationState,
   summarize,
-  type IssueFilter,
   type SummaryLine,
 } from "./bexioExpenses";
-import LinkReceiptModal from "./LinkReceiptModal";
-import useConfirmUnlink from "./useConfirmUnlink";
-
-/** Valeur du filtre « compte » pour « compte inconnu ». */
-const NONE = "none";
-
-const RECONCILIATION_COLOR: Record<ReconciliationModeDTO, string> = {
-  [ReconciliationModeDTO.BEXIO]: "blue",
-  [ReconciliationModeDTO.STATEMENT_IMPORT]: "grape",
-  [ReconciliationModeDTO.NONE]: "gray",
-};
 
 const TILES: {
-  filter: IssueFilter;
-  key: "all" | "missingReceipt" | "notReconciled" | "ok";
+  key: "all" | "linked" | "unlinked";
   icon: TileIcon;
   accent: string;
 }[] = [
+  { key: "all", icon: IconFileInvoice, accent: "var(--mantine-color-gray-6)" },
   {
-    filter: "all",
-    key: "all",
-    icon: IconFileInvoice,
-    accent: "var(--mantine-color-gray-6)",
-  },
-  {
-    filter: BexioExpenseIssueDTO.MISSING_RECEIPT,
-    key: "missingReceipt",
-    icon: IconReceiptOff,
-    accent: "var(--mantine-color-red-6)",
-  },
-  {
-    filter: BexioExpenseIssueDTO.NOT_RECONCILED,
-    key: "notReconciled",
-    icon: IconTransfer,
-    accent: "var(--mantine-color-orange-6)",
-  },
-  {
-    filter: "ok",
-    key: "ok",
+    key: "linked",
     icon: IconCircleCheck,
     accent: "var(--mantine-color-teal-6)",
+  },
+  {
+    key: "unlinked",
+    icon: IconLinkOff,
+    accent: "var(--mantine-color-orange-6)",
   },
 ];
 
 /**
- * Les dépenses de bexio (« Ausgaben ») : chacune doit avoir sa pièce et, si
- * son compte payeur l'exige, être rapprochée — dans bexio, ou ici par la
- * transaction du relevé importé. Filtres dans l'URL ; « Lier une pièce »
- * joint le fichier d'une pièce à la dépense dans bexio.
+ * Les dépenses de bexio (« Ausgaben »), lues en direct : chacune devrait
+ * avoir sa dépense dans l'application — « Créer la dépense » la crée (ou
+ * reprend celle dont la pièce est jointe dans bexio). Filtres dans l'URL.
  */
 export default function BexioExpensesPage() {
   const { t } = useTranslation();
@@ -142,8 +109,7 @@ export default function BexioExpensesPage() {
     const to = params.get("to");
     return from && to ? { from, to } : lastThreeMonths();
   }, [params]);
-  const accountId = params.get("account");
-  const issue = parseIssueFilter(params.get("issue"));
+  const unlinkedOnly = params.get("unlinked") === "1";
   const searchParam = params.get("search") ?? "";
   const [search, setSearch] = useState(searchParam);
   const pushSearch = useDebouncedCallback(
@@ -151,33 +117,27 @@ export default function BexioExpensesPage() {
     300,
   );
 
-  // Le filtre « problème » se fait ici : les tuiles comptent toute la liste.
+  // Toute la liste : les tuiles comptent aussi les rattachées.
   const {
     data: all = [],
     isFetching,
     error,
   } = useGetBexioExpensesQuery({
     ...period,
-    paymentAccountId: accountId ?? undefined,
     search: searchParam || undefined,
   });
-  const { data: accounts = [] } = useGetPaymentAccountsQuery();
   const { data: status } = useGetSyncStatusQuery();
   const [runSync, { isLoading: syncing }] = useRunSyncMutation();
-  const [linking, setLinking] = useState<BexioExpenseDTO | null>(null);
+  const create = useCreateExpense();
 
-  const rows = useMemo(() => filterByIssue(all, issue), [all, issue]);
+  const rows = useMemo(
+    () => (unlinkedOnly ? all.filter((e) => e.expenseId === null) : all),
+    [all, unlinkedOnly],
+  );
   const summary = useMemo(() => summarize(all), [all]);
   const lastRun = status?.last[SyncSourceDTO.BEXIO_EXPENSES];
-  const bexioConfigured = status?.bexioConfigured ?? true;
-  const neverSynced = !!status && !lastRun;
-
-  const accountOptions = [
-    ...accounts
-      .filter((a) => a.active || a.id === accountId)
-      .map((a) => ({ value: a.id, label: a.name })),
-    { value: NONE, label: t("bexioExpenses.unknownAccount") },
-  ];
+  const notConfigured =
+    (status ? !status.bexioConfigured : false) || isConflict(error);
 
   const sync = async () => {
     try {
@@ -195,25 +155,6 @@ export default function BexioExpensesPage() {
     }
   };
 
-  const confirmUnlink = useConfirmUnlink();
-
-  const syncButton = canSync && (
-    <Tooltip
-      label={t("bexioExpenses.notConfigured")}
-      disabled={bexioConfigured}
-    >
-      <Button
-        variant="white"
-        leftSection={<IconRefresh size={16} />}
-        loading={syncing}
-        disabled={!bexioConfigured}
-        onClick={sync}
-      >
-        {t("bexioExpenses.sync")}
-      </Button>
-    </Tooltip>
-  );
-
   return (
     <Page maxWidth={1500}>
       <PageHeader
@@ -222,106 +163,90 @@ export default function BexioExpensesPage() {
         subtitle={t("bexioExpenses.subtitle")}
         count={rows.length}
         badge={
-          status && (
+          lastRun && (
             <Badge
               variant="light"
-              color={
-                lastRun?.success === false ? "red" : lastRun ? "teal" : "gray"
-              }
+              color={lastRun.success === false ? "red" : "teal"}
             >
-              {lastRun
-                ? t("bexioExpenses.lastSync", {
-                    date: formatDateTime(lastRun.startedAt),
-                  })
-                : t("bexioExpenses.neverSynced")}
+              {t("bexioExpenses.lastSync", {
+                date: formatDateTime(lastRun.startedAt),
+              })}
             </Badge>
           )
         }
-        actions={syncButton}
+        actions={
+          canSync && (
+            <Tooltip label={t("bexioExpenses.syncHint")} multiline w={280}>
+              <Button
+                variant="white"
+                leftSection={<IconRefresh size={16} />}
+                loading={syncing}
+                disabled={notConfigured}
+                onClick={sync}
+              >
+                {t("bexioExpenses.sync")}
+              </Button>
+            </Tooltip>
+          )
+        }
       />
-      {status && !status.bexioConfigured && (
+      {notConfigured && (
         <Alert color="gray" variant="light" mb="md">
           {t("bexioExpenses.notConfigured")}
         </Alert>
       )}
-      {neverSynced && status.bexioConfigured && (
-        <Alert
-          color="blue"
-          variant="light"
-          mb="md"
-          icon={<IconRefresh size={18} />}
-          title={t("bexioExpenses.emptyTitle")}
-        >
-          <Group justify="space-between" align="center" gap="sm">
-            <Text size="sm">{t("bexioExpenses.emptyText")}</Text>
-            {canSync && (
-              <Button size="xs" loading={syncing} onClick={sync}>
-                {t("bexioExpenses.sync")}
-              </Button>
-            )}
-          </Group>
-        </Alert>
-      )}
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mb="md">
-        {TILES.map(({ filter, key, icon, accent }) => (
-          <UnstyledButton
-            key={key}
-            onClick={() =>
-              setParam({ issue: filter === "all" ? null : filter })
-            }
-            aria-pressed={issue === filter}
-          >
-            <SummaryTile
-              label={t(`bexioExpenses.tiles.${key}`)}
-              line={summary[key]}
-              icon={icon}
-              accent={accent}
-              loading={isFetching && all.length === 0}
-              active={issue === filter}
-            />
-          </UnstyledButton>
-        ))}
+      <SimpleGrid cols={{ base: 1, xs: 3 }} mb="md">
+        {TILES.map(({ key, icon, accent }) => {
+          const active =
+            key === "unlinked" ? unlinkedOnly : key === "all" && !unlinkedOnly;
+          return (
+            <UnstyledButton
+              key={key}
+              disabled={key === "linked"}
+              onClick={() =>
+                setParam({ unlinked: key === "unlinked" ? "1" : null })
+              }
+              aria-pressed={active}
+            >
+              <SummaryTile
+                label={t(`bexioExpenses.tiles.${key}`)}
+                line={summary[key]}
+                icon={icon}
+                accent={accent}
+                loading={isFetching && all.length === 0}
+                active={active}
+              />
+            </UnstyledButton>
+          );
+        })}
       </SimpleGrid>
-      <Stack gap="sm" mb="md">
-        <SegmentedControl
-          data={ISSUE_FILTERS.map((value) => ({
-            value,
-            label: t(`bexioExpenses.filter.${value}`),
-          }))}
-          value={issue}
-          onChange={(v) => setParam({ issue: v === "all" ? null : v })}
-          style={{ alignSelf: "flex-start", maxWidth: "100%" }}
-          styles={{ root: { overflowX: "auto" } }}
+      <Group gap="sm" mb="md" align="flex-end" wrap="wrap">
+        <PeriodPicker
+          value={period}
+          onChange={(p) => setParam({ from: p.from, to: p.to })}
         />
-        <Group gap="sm" align="flex-end" wrap="wrap">
-          <PeriodPicker
-            value={period}
-            onChange={(p) => setParam({ from: p.from, to: p.to })}
-          />
-          <Select
-            placeholder={t("expenses.allAccounts")}
-            aria-label={t("bexioExpenses.paymentAccount")}
-            data={accountOptions}
-            value={accountId}
-            onChange={(v) => setParam({ account: v })}
-            clearable
-            w={230}
-          />
-          <TextInput
-            placeholder={t("bexioExpenses.search")}
-            aria-label={t("bexioExpenses.search")}
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.currentTarget.value);
-              pushSearch(e.currentTarget.value);
-            }}
-            w={260}
-          />
-        </Group>
-      </Stack>
+        <TextInput
+          placeholder={t("bexioExpenses.search")}
+          aria-label={t("bexioExpenses.search")}
+          leftSection={<IconSearch size={16} />}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.currentTarget.value);
+            pushSearch(e.currentTarget.value);
+          }}
+          w={260}
+        />
+        <Switch
+          label={t("bexioExpenses.unlinkedOnly")}
+          checked={unlinkedOnly}
+          onChange={(e) =>
+            setParam({ unlinked: e.currentTarget.checked ? "1" : null })
+          }
+          mb={8}
+        />
+      </Group>
       <Card withBorder p={0}>
-        <Table.ScrollContainer minWidth={1300}>
+        <Table.ScrollContainer minWidth={1250}>
           <Table verticalSpacing="sm" highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -331,10 +256,9 @@ export default function BexioExpensesPage() {
                 <Table.Th>{t("bexioExpenses.bookingAccount")}</Table.Th>
                 <Table.Th>{t("bexioExpenses.paymentAccount")}</Table.Th>
                 <Table.Th ta="right">{t("expenses.amount")}</Table.Th>
-                <Table.Th>{t("bexioExpenses.receipt")}</Table.Th>
+                <Table.Th>{t("bexioExpenses.attachments")}</Table.Th>
                 <Table.Th>{t("bexioExpenses.reconciliation")}</Table.Th>
-                <Table.Th>{t("bexioExpenses.issues")}</Table.Th>
-                {canManage && <Table.Th w={60} />}
+                <Table.Th>{t("bexioExpenses.expense")}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -344,22 +268,24 @@ export default function BexioExpensesPage() {
                   row={row}
                   canManage={canManage}
                   backState={backState}
+                  creating={create.pendingBexioId === row.id}
                   onOpen={() =>
                     navigate(`/bexio-expenses/${row.id}`, { state: backState })
                   }
-                  onLink={() => setLinking(row)}
-                  onUnlink={() => confirmUnlink(row)}
+                  onCreate={() => create.fromBexio(row.id)}
                 />
               ))}
               {rows.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={canManage ? 10 : 9}>
+                  <Table.Td colSpan={9}>
                     <Text c="dimmed" ta="center" py="lg">
                       {isFetching
                         ? t("common.loading")
-                        : error
-                          ? getErrorMessage(error)
-                          : t("bexioExpenses.empty")}
+                        : notConfigured
+                          ? t("bexioExpenses.notConfiguredShort")
+                          : error
+                            ? getErrorMessage(error)
+                            : t("bexioExpenses.empty")}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -368,11 +294,6 @@ export default function BexioExpensesPage() {
           </Table>
         </Table.ScrollContainer>
       </Card>
-      <LinkReceiptModal
-        bexioExpense={linking}
-        period={period}
-        onClose={() => setLinking(null)}
-      />
     </Page>
   );
 }
@@ -423,20 +344,19 @@ function BexioExpenseRow({
   row,
   canManage,
   backState,
+  creating,
   onOpen,
-  onLink,
-  onUnlink,
+  onCreate,
 }: {
   row: BexioExpenseDTO;
   canManage: boolean;
   backState: { back: string };
+  creating: boolean;
   onOpen: () => void;
-  onLink: () => void;
-  onUnlink: () => void;
+  onCreate: () => void;
 }) {
   const { t } = useTranslation();
-  const draft = row.status === "DRAFT";
-  const detailPath = `/bexio-expenses/${row.id}`;
+  const state = reconciliationState(row);
   return (
     <Table.Tr onClick={onOpen} style={{ cursor: "pointer" }}>
       <Table.Td style={{ whiteSpace: "nowrap" }}>
@@ -446,7 +366,7 @@ function BexioExpenseRow({
         <Text size="sm" ff="monospace">
           {row.documentNo}
         </Text>
-        {draft && (
+        {row.status === "DRAFT" && (
           <Badge size="xs" variant="outline" color="gray">
             {t("bexioExpenses.draft")}
           </Badge>
@@ -455,7 +375,7 @@ function BexioExpenseRow({
       <Table.Td maw={260}>
         <Anchor
           component={Link}
-          to={detailPath}
+          to={`/bexio-expenses/${row.id}`}
           state={backState}
           onClick={stop}
           size="sm"
@@ -488,188 +408,64 @@ function BexioExpenseRow({
           </Text>
         )}
       </Table.Td>
-      <Table.Td>
-        {row.paymentAccountId ? (
-          <Stack gap={2} align="flex-start">
-            <Text size="sm">{row.paymentAccountName}</Text>
-            {row.reconciliation && (
-              <Badge
-                size="xs"
-                variant="light"
-                color={RECONCILIATION_COLOR[row.reconciliation]}
-              >
-                {t(`bexioExpenses.reconciliationMode.${row.reconciliation}`)}
-              </Badge>
-            )}
-          </Stack>
-        ) : (
-          <Tooltip label={t("bexioExpenses.toAssociateHint")}>
-            <Badge
-              component={Link}
-              to={detailPath}
-              state={backState}
-              onClick={stop}
-              size="sm"
-              variant="light"
-              color="orange"
-              style={{ cursor: "pointer" }}
-            >
-              {t("bexioExpenses.toAssociate")}
-            </Badge>
-          </Tooltip>
-        )}
+      <Table.Td maw={220}>
+        <Stack gap={2} align="flex-start">
+          <Text size="sm" truncate>
+            {row.paymentAccountName ?? row.bankAccountName ?? "—"}
+          </Text>
+          {row.bankAccountNo && (
+            <Text size="xs" c="dimmed" ff="monospace">
+              {row.bankAccountNo}
+            </Text>
+          )}
+        </Stack>
       </Table.Td>
       <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>
         <Text size="sm" fw={600}>
           {formatAmount(row.gross, row.currency)}
         </Text>
       </Table.Td>
-      <Table.Td maw={220} onClick={stop}>
-        <ReceiptCell row={row} canManage={canManage} onLink={onLink} />
-      </Table.Td>
-      <Table.Td onClick={stop}>
-        <ReconciliationCell row={row} />
-      </Table.Td>
       <Table.Td>
-        {row.issues.length === 0 ? (
-          <Badge size="sm" variant="light" color="teal">
-            {t("bexioExpenses.ok")}
-          </Badge>
+        {row.attachmentIds.length > 0 ? (
+          <Group gap={4} wrap="nowrap">
+            <IconPaperclip size={14} />
+            <Text size="sm">{row.attachmentIds.length}</Text>
+          </Group>
         ) : (
-          <Stack gap={4} align="flex-start">
-            {row.issues.map((code) => (
-              <Badge
-                key={code}
-                size="xs"
-                variant="light"
-                color={code === BexioExpenseIssueDTO.DRAFT ? "gray" : "red"}
-              >
-                {t(`bexioExpenses.issue.${code}`)}
-              </Badge>
-            ))}
-          </Stack>
+          <Badge size="sm" variant="light" color="red">
+            {t("bexioExpenses.noAttachmentShort")}
+          </Badge>
         )}
       </Table.Td>
-      {canManage && (
-        <Table.Td onClick={stop}>
-          {row.expenseId ? (
-            <Tooltip label={t("bexioExpenses.unlink.action")}>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                onClick={onUnlink}
-                aria-label={t("bexioExpenses.unlink.action")}
-              >
-                <IconLinkOff size={16} />
-              </ActionIcon>
-            </Tooltip>
-          ) : (
-            <Tooltip label={t("bexioExpenses.link.action")}>
-              <ActionIcon
-                variant="subtle"
-                onClick={onLink}
-                aria-label={t("bexioExpenses.link.action")}
-              >
-                <IconLink size={16} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </Table.Td>
-      )}
-    </Table.Tr>
-  );
-}
-
-function ReceiptCell({
-  row,
-  canManage,
-  onLink,
-}: {
-  row: BexioExpenseDTO;
-  canManage: boolean;
-  onLink: () => void;
-}) {
-  const { t } = useTranslation();
-  if (row.expenseId) {
-    return (
-      <Anchor
-        component={Link}
-        to={`/expenses/${row.expenseId}`}
-        size="sm"
-        style={{ display: "block" }}
-        truncate
-      >
-        {row.expenseFileName ?? t("bexioExpenses.openReceipt")}
-      </Anchor>
-    );
-  }
-  if (row.attachmentCount > 0) {
-    return (
-      <Group gap={4} wrap="nowrap">
-        <IconPaperclip size={14} />
-        <Text size="sm" c="dimmed">
-          {t("bexioExpenses.attached", { count: row.attachmentCount })}
-        </Text>
-      </Group>
-    );
-  }
-  return (
-    <Group gap={6} wrap="nowrap">
-      <Badge size="sm" variant="light" color="red">
-        {t("bexioExpenses.missing")}
-      </Badge>
-      {canManage && (
-        <Anchor component="button" size="xs" onClick={onLink}>
-          {t("bexioExpenses.link.action")}
-        </Anchor>
-      )}
-    </Group>
-  );
-}
-
-function ReconciliationCell({ row }: { row: BexioExpenseDTO }) {
-  const { t } = useTranslation();
-  if (row.reconciled === null) {
-    return (
-      <Badge size="sm" variant="light" color="gray">
-        {t("bexioExpenses.notRequired")}
-      </Badge>
-    );
-  }
-  if (row.reconciled) {
-    return (
-      <Stack gap={0} align="flex-start">
-        <Badge size="sm" variant="light" color="teal">
-          {t("bexioExpenses.reconciled")}
+      <Table.Td>
+        <Badge size="sm" variant="light" color={STATE_COLOR[state]}>
+          {t(`bexioExpenses.reconciliationState.${state}`)}
         </Badge>
-        <Text size="xs" c="dimmed">
-          {row.bexioReconciled
-            ? t("bexioExpenses.reconciledInBexio")
-            : t("bexioExpenses.reconciledStatement")}
-        </Text>
-      </Stack>
-    );
-  }
-  return (
-    <Stack gap={2} align="flex-start">
-      <Badge size="sm" variant="light" color="orange">
-        {t("bexioExpenses.toReconcile")}
-      </Badge>
-      {row.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT ? (
-        row.expenseId ? (
-          <Anchor component={Link} to={`/expenses/${row.expenseId}`} size="xs">
-            {t("bexioExpenses.reconcile")}
+      </Table.Td>
+      <Table.Td onClick={stop} style={{ whiteSpace: "nowrap" }}>
+        {row.expenseId ? (
+          <Anchor component={Link} to={`/expenses/${row.expenseId}`} size="sm">
+            <Group gap={4} wrap="nowrap">
+              {t("bexioExpenses.openExpense")}
+              <IconExternalLink size={14} />
+            </Group>
           </Anchor>
+        ) : canManage ? (
+          <Button
+            size="xs"
+            variant="light"
+            leftSection={<IconPlus size={14} />}
+            loading={creating}
+            onClick={onCreate}
+          >
+            {t("bexioExpenses.create")}
+          </Button>
         ) : (
-          <Text size="xs" c="dimmed">
-            {t("bexioExpenses.linkFirst")}
-          </Text>
-        )
-      ) : (
-        <Text size="xs" c="dimmed">
-          {t("bexioExpenses.reconcileInBexio")}
-        </Text>
-      )}
-    </Stack>
+          <Badge size="sm" variant="light" color="orange">
+            {t("bexioExpenses.unlinked")}
+          </Badge>
+        )}
+      </Table.Td>
+    </Table.Tr>
   );
 }

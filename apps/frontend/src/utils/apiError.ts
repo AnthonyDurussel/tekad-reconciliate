@@ -20,3 +20,9 @@ export function getErrorMessage(error: unknown): string {
   }
   return e.message ?? i18n.t("common.apiErrors.unexpected");
 }
+
+/** 409 : pour une lecture bexio, bexio n'est pas configuré. */
+export function isConflict(error: unknown): boolean {
+  const e = error as FetchBaseQueryError | SerializedError | undefined;
+  return !!e && "status" in e && e.status === 409;
+}

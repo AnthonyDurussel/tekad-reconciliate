@@ -15,6 +15,16 @@ type RejectedMeta = {
 const SILENT_ENDPOINTS = new Set(["getBexioAccounts", "getBexioTaxes"]);
 
 /**
+ * Lectures en direct de bexio : sans bexio (409) l'écran le dit lui-même ;
+ * une autre erreur (bexio indisponible…) reste notifiée.
+ */
+const SILENT_CONFLICT_ENDPOINTS = new Set([
+  "getBexioExpenses",
+  "getBexioExpense",
+  "getExpenseBexioCandidates",
+]);
+
+/**
  * Notifie les **requêtes** en échec. Une mutation est toujours attendue par un
  * `unwrap()` dans un `try/catch` : le composant affiche l'erreur dans son
  * contexte, la notifier ici la ferait apparaître deux fois.
@@ -27,7 +37,11 @@ export const apiErrorNotificationMiddleware: Middleware =
       if (
         meta.arg?.type !== "mutation" &&
         error.status !== 401 &&
-        !SILENT_ENDPOINTS.has(meta.arg?.endpointName ?? "")
+        !SILENT_ENDPOINTS.has(meta.arg?.endpointName ?? "") &&
+        !(
+          error.status === 409 &&
+          SILENT_CONFLICT_ENDPOINTS.has(meta.arg?.endpointName ?? "")
+        )
       ) {
         notifications.show({
           title: i18n.t("common.apiErrors.title"),
