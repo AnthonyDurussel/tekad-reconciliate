@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `tekad-reconciliate` reconciles the **company's expenses** between **Revolut Business**, **UBS**,
 **Anthony's current account** (compte courant associé) and **bexio**. Every receipt is dropped into
-the **bexio inbox**; the app imports it, **reads it** (**Mistral OCR through OpenRouter**, then an LLM chosen in the
+the **bexio inbox**; the **dépense** is the central element of the app (one pièce, one bexio expense, one statement transaction when its account is reconciled by statement); the app imports each pièce, **reads it** (**Mistral OCR through OpenRouter**, then an LLM chosen in the
 app extracts merchant, date, amount, VAT, **the last 4 digits of the card**), **classifies it by payment account** from the card, proposes an
 **expense type** and the **bexio booking** (debit expense account / credit payment account / VAT
 code), **matches Revolut receipts with the Revolut Business transactions** — imported from the **CSV
@@ -38,7 +38,7 @@ Revolut / OpenRouter, `ioc/` bindings), `index.functions.ts` (routes). Use cases
 | `bexio`           | port `IBexioGateway` (inbox files, download, accounts, taxes, manual entries + attachment), adapter `BexioHttpGateway`                     |
 | `extraction`      | port `IReceiptReader`, adapter `OpenRouterReceiptReader` (Mistral OCR `file-parser` plugin + JSON-schema output)                          |
 | `ai`              | AI settings administered in the app (`ai_settings`, like dranse-risque): OpenRouter key sealed, extraction model, OCR engine; `AiRuntime` |
-| `bexio-expense`   | bexio expenses (« Ausgaben », `GET 4.0/expenses`) synced to `bexio_expenses`: receipt linked, reconciliation checked (`checkBexioExpense()`), « Lier une pièce » |
+| `bexio-expense`   | bexio expenses (« Ausgaben », `4.0/expenses`) **read live** (never stored): accounts resolved by the chart, payment account by its chart account, linked dépense |
 | `sync`            | orchestration: `SyncUseCases` (inbox → extraction → matching; Revolut statement import + matching), `sync_runs` log, nightly timer        |
 | `dashboard`       | aggregates per status / account / type, missing receipts                                                                                   |
 | `config`          | backend info                                                                                                                               |
@@ -54,13 +54,14 @@ answer 409 — never a 500.
 | Compte de paiement: any account (nature `REVOLUT`, `UBS` = bank, `PERSONAL`, `OTHER` — display and defaults only); bexio account credited (`1021`, `1020`, `2210`…); **rapprochement** `reconciliation`: `BEXIO` (bank reconciliation done in bexio, e.g. UBS — the app proposes the booking only), `STATEMENT_IMPORT` (CSV statement imported here, format `statementFormat` `REVOLUT_BUSINESS` / `REVOLUT_PERSONAL`; every debit needs its receipt; optional statement account name `revolutAccountId` for multi-account Business statements) or `NONE` (no statement, e.g. compte courant); `bookingMode` derived (`bookingModeFor()`: BEXIO → `BEXIO_RECONCILIATION`, else `MANUAL_ENTRY`) | `payment_accounts`, `PaymentAccountDTO`                  |
 | Carte: typed in full or masked in « Comptes et cartes » (`number`, never stored) → last 4 digits (unique) + masked form `516760******4721` (`maskCardNumber()`); also added automatically from the Revolut statement (`Card number`, `Card label`) to the Revolut account; the card read on a receipt gives its payment account (`accountForCard()`) | `payment_cards`                                          |
 | Type de dépense: **taken from the bexio chart of accounts** — one per active EXPENSE account (`POST expense-categories/sync-bexio`: code = account number, label = bexio name, bexio `tax_id` and its rate; default keyword / MCC rules by account number on creation, `DEFAULT_RULES_BY_ACCOUNT`; the user's rules kept; a type whose account left bexio is deactivated); **keywords** and **MCC codes** (`categoryByRules()`) | `expense_categories` (`bexio_account_id`), `ExpenseCategoryDTO` |
-| Pièce: one bexio inbox file; extraction, account (+ source CARD / TRANSACTION / MANUAL), type (+ source RULE / AI / MANUAL), booking overrides, Revolut transaction, bexio entry                                             | `expenses`, `ExpenseDTO`, `Expense` (domain)             |
+| **Dépense** — the central element: born from a pièce (`source` RECEIPT), a statement debit (TRANSACTION) or a bexio expense (BEXIO); linked to **one pièce** (`receipt_id`), **one bexio expense** (`bexio_expense_id`, read live) or a manual entry (`bexio_entry_id`), and — for a `STATEMENT_IMPORT` account — **one statement transaction**; `issues` (`expenseIssues()`): `MISSING_RECEIPT`, `NOT_IN_BEXIO`, `NOT_RECONCILED`; fields, account (+ source CARD / TRANSACTION / MANUAL), type (+ source RULE / AI / MANUAL), booking overrides | `expenses`, `ExpenseDTO`, `Expense` (domain)             |
+| Pièce: one bexio inbox file (`bexio_file_id`, `bexio_file_uuid`) and its reading (`extraction`); every pièce has a dépense (imported with it; a detached one gets its own back) | `receipts`, `ReceiptDTO`, `ReceiptProps`                 |
 | Transaction Revolut: one statement row (ID + `Account`); `requiresReceipt()` (debit, completed/pending, not exchange/fee/topup/refund); may be ignored (« pas de pièce ») with a reason                                    | `revolut_transactions`, `RevolutTransactionDTO`          |
 
 bexio chart (`GET bexio/accounts`, `GET bexio/taxes`, port `IBexioGateway.listAccounts/listTaxes`): with bexio configured, an expense type's account must be an EXPENSE account and a payment account's an ASSET or LIABILITY account of the chart (400 otherwise); without bexio the number is taken as typed. The screens pick accounts and VAT codes from these lists (free text when bexio answers 409).
 
 Status (`expenseStatus()`): `NEW` (not read) → `TO_REVIEW` / `READY` (computed: date, amount,
-payment account, type, and **for a `STATEMENT_IMPORT` account the matched transaction**) → `BOOKED`; `IGNORED` aside.
+payment account, type, **the pièce**, and **for a `STATEMENT_IMPORT` account the matched transaction**) → `BOOKED`; `IGNORED` aside.
 Precedence: a MANUAL value is never overwritten by a re-extraction or a sync.
 
 Classification order for the payment account: card on the receipt → the matched Revolut
@@ -85,19 +86,23 @@ Matching (`scoreMatch()`, `autoMatch()`): amount is mandatory (account amount, o
 receipt currency, ±0.01), date ≤ 5 days, card, merchant similarity; auto-match at ≥ 70 points and
 10 ahead of the next. A transaction belongs to one receipt at most.
 
-Dépenses bexio (`bexio-expense`): `POST sync/bexio-expenses` (also last step of `sync/all`) reads every
-bexio expense, resolves its booking account (chart) and its paying bank account (`3.0/banking/accounts`), stores
-them with the bank's **chart account** (`bank_account_no` / `bank_account_name`). The paying payment
-account: chosen on the expense (`bexio_expenses.payment_account_id`, kept by syncs, source `MANUAL`)
-› the payment account **associated with that chart account** — its `bexioAccountNo` (source
-`ACCOUNT_NO`); one chart account ↔ one payment account. and links each pièce whose
-file UUID (`expenses.bexio_file_uuid`) is among the expense's `attachment_ids` (`Expense.linkBexioExpense`
-→ BOOKED); a pièce linked to an expense gone from bexio is unlinked. `checkBexioExpense()` flags
-`MISSING_RECEIPT` (no attachment, no linked pièce), `NOT_RECONCILED` (account `BEXIO`: no bexio
-`transaction_id`; account `STATEMENT_IMPORT`: linked pièce without statement transaction and no bexio
-`transaction_id`; `NONE`: not required), `UNKNOWN_ACCOUNT`, `DRAFT`. `POST bexio-expenses/{id}/link`
-attaches the pièce's file to the bexio expense (`PUT 4.0/expenses/{id}` with all its fields +
-`attachment_ids`) and links it; one pièce per bexio expense.
+Dépenses bexio (`bexio-expense`, `BexioExpenseUseCases`): read **live** through `IBexioGateway.listExpenses`
+(filters `paid_on_start/end`, `vendor`) / `getExpense`; chart and bank accounts cached 5 min in the
+gateway. Booking account from the chart; paying bank account's **chart account** (`bank_account_id` →
+`3.0/banking/accounts` → chart) gives the payment account whose `bexioAccountNo` it is; `expenseId` = the
+dépense with that `bexio_expense_id` (one dépense per bexio expense, unique).
+
+Links of a dépense (`ExpenseUseCases`): `POST expenses/from-transaction` (statement debit without
+dépense), `POST expenses/from-bexio` (reuses the dépense whose pièce file is attached to it, else a
+BOOKED dépense from its data); `PUT expenses/{id}/receipt` attaches a pièce — orphan, or one whose
+dépense is nothing but it (`isLoneReceipt()`: source RECEIPT, no transaction, no bexio, not booked — that
+dépense is deleted); fields already set stay, the reading fills the empty ones; if the dépense is in
+bexio the file is attached there (`PUT 4.0/expenses/{id}` with all fields + `attachment_ids`).
+`DELETE …/receipt` gives the pièce its own dépense back. `PUT expenses/{id}/bexio` links a bexio expense
+(file attached in bexio if missing, dépense → BOOKED); `DELETE …/bexio` unlinks here only.
+`POST sync/bexio-expenses` (last step of `sync/all`, `linkBexioExpenses()`): links each dépense whose
+pièce file UUID is among a bexio expense's `attachment_ids`, unlinks dépenses whose bexio expense is
+gone. Revolut `filter=missing` = debits without dépense or whose dépense has no pièce.
 
 Booking (`bookingProposal()`): debit = override ?? type account, credit = override ?? payment
 account's bexio account, tax = override ?? type's; amount CHF = Revolut debited amount, else the
@@ -134,7 +139,12 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `POST`, `PUT/DELETE …/{id}` on both                                                          | `SETTINGS_MANAGE`                  | delete → 409 while used: deactivate                               |
 | `POST expense-categories/sync-bexio`                                                         | `SETTINGS_MANAGE`                  | → `CategorySyncResultDTO`; 409 without bexio                      |
 | `GET bexio/accounts`, `GET bexio/taxes`                                                      | `EXPENSE_VIEW` or `SETTINGS_MANAGE` | `BexioAccountDTO[]` / `BexioTaxDTO[]`; 409 without bexio          |
-| `GET expenses?from&to&paymentAccountId&categoryId&status&search`                             | `EXPENSE_VIEW`                     | `ExpenseDTO[]` (`paymentAccountId=none` / `categoryId=none`: unset) |
+| `GET expenses?from&to&paymentAccountId&categoryId&status&search&issue`                       | `EXPENSE_VIEW`                     | `ExpenseDTO[]` (`paymentAccountId=none` / `categoryId=none`: unset; `issue` = an `ExpenseIssueDTO` or `ok`) |
+| `POST expenses/from-transaction`, `POST expenses/from-bexio`                                 | `EXPENSE_MANAGE`                   | `CreateExpenseFromTransactionDTO` / `CreateExpenseFromBexioDTO` → `ExpenseDTO`; 409 if already linked |
+| `GET expenses/{id}/receipt-candidates`, `GET receipts/{id}/file`                             | `EXPENSE_VIEW`                     | `ReceiptDTO[]` / the pièce's file                                 |
+| `PUT/DELETE expenses/{id}/receipt`                                                           | `EXPENSE_MANAGE`                   | `LinkReceiptDTO` → `ExpenseDTO`                                   |
+| `GET expenses/{id}/bexio-candidates`                                                         | `EXPENSE_VIEW`                     | `BexioExpenseDTO[]` (live, ±10 days, unlinked, best first)        |
+| `PUT/DELETE expenses/{id}/bexio`                                                             | `EXPENSE_MANAGE`                   | `LinkExpenseBexioDTO` → `ExpenseDTO`; 409 if linked elsewhere     |
 | `GET expenses/export?…same filters`                                                          | `EXPENSE_VIEW`                     | `.xlsx`                                                           |
 | `GET expenses/{id}`, `GET expenses/{id}/candidates`, `GET expenses/{id}/file`                | `EXPENSE_VIEW`                     | `ExpenseDTO` (+ `transaction`) / `MatchCandidateDTO[]` / the file |
 | `PUT expenses/{id}`                                                                          | `EXPENSE_MANAGE`                   | `UpdateExpenseDTO` → `ExpenseDTO` (set fields become MANUAL)      |
@@ -142,11 +152,9 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `POST expenses/{id}/book`, `/unbook`                                                         | `EXPENSE_BOOK`                     | → `ExpenseDTO`; 409 unless READY (book) / BOOKED (unbook)         |
 | `GET revolut/transactions?from&to&filter&search`                                             | `EXPENSE_VIEW`                     | `RevolutTransactionDTO[]`; `filter=missing` = receipts to ask for |
 | `POST revolut/transactions/{id}/ignore`, `/restore`                                          | `EXPENSE_MANAGE`                   | `IgnoreDTO` → `RevolutTransactionDTO`                             |
-| `GET bexio-expenses?from&to&paymentAccountId&issue&search`                                  | `EXPENSE_VIEW`                     | `BexioExpenseDTO[]` (`issue` = a `BexioExpenseIssueDTO` or `ok`)  |
+| `GET bexio-expenses?from&to&search&unlinked`                                                 | `EXPENSE_VIEW`                     | `BexioExpenseDTO[]` live; 409 without bexio                       |
 | `GET bexio-expenses/{id}`                                                                    | `EXPENSE_VIEW`                     | `BexioExpenseDetailDTO` (+ `attachments`: uuid, name, mime — `3.0/files/search` by uuid) |
-| `GET bexio-expenses/{id}/files/{uuid}`                                                       | `EXPENSE_VIEW`                     | the attached file (only one of this expense, or its linked pièce's) |
-| `PUT bexio-expenses/{id}/payment-account`                                                    | `EXPENSE_MANAGE`                   | `SetBexioExpenseAccountDTO` (`applyToAccount` → the payment account's `bexioAccountNo` = the expense's chart account; 409 if another account has it) |
-| `POST bexio-expenses/{id}/link`, `/unlink`                                                   | `EXPENSE_MANAGE`                   | `LinkBexioExpenseDTO` → `BexioExpenseDTO`                         |
+| `GET bexio-expenses/{id}/files/{uuid}`                                                       | `EXPENSE_VIEW`                     | a file attached to that bexio expense only                        |
 | `GET dashboard?from&to`                                                                      | `EXPENSE_VIEW`                     | `DashboardDTO`                                                    |
 | `GET sync/status`, `GET sync/runs`                                                           | `EXPENSE_VIEW`                     | `SyncStatusDTO` / `SyncRunDTO[]` (50 last)                        |
 | `GET/PUT/DELETE ai/settings`, `POST ai/settings/models`, `POST ai/settings/test`              | `SETTINGS_MANAGE`                  | `AiSettingsDTO` / `UpdateAiSettingsDTO` (`apiKey` absent keeps the stored one) / back to env; `AiConnectionDTO` → `AiModelDTO[]` / `AiConnectionTestDTO` |
@@ -174,10 +182,12 @@ normalised by `toExtraction()` (dates, ISO currency, card last 4 cross-checked w
 ## Frontend screens
 
 `/dashboard` « Tableau de bord » (KPIs per status, amounts per payment account and per type, missing
-Revolut receipts, last syncs + sync buttons); `/expenses` « Pièces » (filters: period, **payment
-account**, **type**, status, search — kept in the URL; table with account / type / booking / status;
-Excel); `/expenses/:id` (receipt preview, extracted fields, account & type, booking proposal,
-Revolut match + candidates, actions); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
+Revolut receipts, last syncs + sync buttons); `/expenses` « Dépenses » (filters: period, **payment
+account**, **type**, status, issue, search — kept in the URL; table with pièce / bexio / rapprochement,
+account / type / booking / status; Excel); `/expenses/:id` (cards Pièce — preview, attach / detach —,
+Dépense bexio — live, link / detach —, Rapprochement for `STATEMENT_IMPORT` accounts; fields, account &
+type, booking proposal, actions); `/bexio-expenses` « Dépenses bexio » (live list and detail,
+« Créer la dépense »); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
 `/admin/accounts` « Comptes et cartes », `/admin/categories` « Types de dépense », `/admin/ai` « Intelligence artificielle », `/admin/users`.
 Home: `/dashboard`.
 

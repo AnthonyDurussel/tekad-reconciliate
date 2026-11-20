@@ -13,6 +13,7 @@ const ctx = { accounts, categories, transaction: null };
 const fresh = () =>
   Expense.importFromInbox({
     id: "e1",
+    receiptId: "r1",
     bexioFileId: "f1",
     fileName: "ticket.pdf",
     mimeType: "application/pdf",

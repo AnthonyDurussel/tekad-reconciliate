@@ -41,6 +41,31 @@ export function registerExpenseRoutes(app: HttpRouteRegistrar) {
   // Les routes fixes passent avant `expenses/{id}`.
   add("listExpenses", "GET", "expenses", VIEW, "list", false);
   add("exportExpenses", "GET", "expenses/export", VIEW, "export", false);
+  // Création : depuis une sortie de relevé ou une dépense bexio (lue en direct).
+  add(
+    "createExpenseFromTransaction",
+    "POST",
+    "expenses/from-transaction",
+    MANAGE,
+    "createFromTransaction",
+    true,
+  );
+  add(
+    "createExpenseFromBexio",
+    "POST",
+    "expenses/from-bexio",
+    MANAGE,
+    "createFromBexio",
+    false,
+  );
+  add(
+    "getReceiptFile",
+    "GET",
+    "receipts/{id}/file",
+    VIEW,
+    "receiptFile",
+    false,
+  );
   add("getExpense", "GET", "expenses/{id}", VIEW, "get", false);
   add("getExpenseFile", "GET", "expenses/{id}/file", VIEW, "file", false);
   add(
@@ -51,7 +76,57 @@ export function registerExpenseRoutes(app: HttpRouteRegistrar) {
     "candidates",
     false,
   );
+  add(
+    "getExpenseReceiptCandidates",
+    "GET",
+    "expenses/{id}/receipt-candidates",
+    VIEW,
+    "receiptCandidates",
+    false,
+  );
+  add(
+    "getExpenseBexioCandidates",
+    "GET",
+    "expenses/{id}/bexio-candidates",
+    VIEW,
+    "bexioCandidates",
+    false,
+  );
   add("updateExpense", "PUT", "expenses/{id}", MANAGE, "update", true);
+  // Pièce : rattacher (le fichier est joint dans bexio si besoin) / détacher.
+  add(
+    "linkExpenseReceipt",
+    "PUT",
+    "expenses/{id}/receipt",
+    MANAGE,
+    "linkReceipt",
+    false,
+  );
+  add(
+    "unlinkExpenseReceipt",
+    "DELETE",
+    "expenses/{id}/receipt",
+    MANAGE,
+    "unlinkReceipt",
+    true,
+  );
+  // Dépense bexio : rattacher (écrit dans bexio) / détacher (ici seulement).
+  add(
+    "linkExpenseBexio",
+    "PUT",
+    "expenses/{id}/bexio",
+    MANAGE,
+    "linkBexio",
+    false,
+  );
+  add(
+    "unlinkExpenseBexio",
+    "DELETE",
+    "expenses/{id}/bexio",
+    MANAGE,
+    "unlinkBexio",
+    true,
+  );
   // Lecture (appel Claude) hors transaction : plusieurs secondes.
   add(
     "extractExpense",

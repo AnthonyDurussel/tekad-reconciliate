@@ -39,24 +39,24 @@ model UserDB {
 // ===== PARAMÉTRAGE =====
 /// Compte qui paie : Revolut, UBS, compte courant d'Anthony…
 model PaymentAccountDB {
-  id                    String   @id @default(uuid())
+  id                 String   @id @default(uuid())
   /// `PaymentAccountKindDTO`
-  kind                  String
-  name                  String   @unique
+  kind               String
+  name               String   @unique
   /// Compte bexio crédité (1021, 1020, 2210…).
-  bexio_account_no      String?
+  bexio_account_no   String?
   /// `ReconciliationModeDTO` : BEXIO | STATEMENT_IMPORT | NONE
-  reconciliation        String   @default("NONE")
+  reconciliation     String   @default("NONE")
   /// `StatementFormatDTO` (import seulement)
-  statement_format      String?
+  statement_format   String?
   /// `BookingModeDTO`, découle de `reconciliation`
-  booking_mode          String   @default("MANUAL_ENTRY")
+  booking_mode       String   @default("MANUAL_ENTRY")
   /// `account_id` Revolut des transactions de ce compte.
-  revolut_account_id    String?  @unique
-  position              Int      @default(0)
-  active                Boolean  @default(true)
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  revolut_account_id String?  @unique
+  position           Int      @default(0)
+  active             Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
 
   cards        PaymentCardDB[]
   expenses     ExpenseDB[]
@@ -104,17 +104,34 @@ model ExpenseCategoryDB {
 }
 
 // ===== PIÈCES =====
-/// Pièce comptable importée de l'inbox bexio.
-model ExpenseDB {
-  id              String   @id @default(uuid())
-  /// `ExpenseStatusDTO`
-  status          String   @default("NEW")
-  bexio_file_id   String   @unique
+/// Pièce : un fichier de l'inbox bexio et ce que sa lecture a donné.
+model ReceiptDB {
+  id              String    @id @default(uuid())
+  bexio_file_id   String    @unique
   /// UUID du fichier bexio (les dépenses bexio joignent les fichiers par UUID).
   bexio_file_uuid String?
   file_name       String
   mime_type       String?
-  imported_at     DateTime @default(now())
+  imported_at     DateTime  @default(now())
+  /// Résultat brut de la lecture (`ExtractionDTO`).
+  extraction      Json?
+  extracted_at    DateTime?
+
+  expense ExpenseDB?
+
+  @@map("receipts")
+}
+
+/// Dépense : l'élément central — sa pièce, sa dépense bexio, sa transaction.
+model ExpenseDB {
+  id         String   @id @default(uuid())
+  /// `ExpenseStatusDTO`
+  status     String   @default("NEW")
+  /// `ExpenseSourceDTO` : RECEIPT | TRANSACTION | BEXIO
+  source     String   @default("RECEIPT")
+  created_at DateTime @default(now())
+  /// La pièce rattachée (une pièce ne porte qu'une dépense).
+  receipt_id String?  @unique
 
   date           DateTime? @db.Date
   merchant       String?
@@ -125,8 +142,7 @@ model ExpenseDB {
   vat_rate       Decimal?  @db.Decimal(5, 2)
   card_last4     String?
   payment_method String?
-  /// Résultat brut de la lecture (`ExtractionDTO`).
-  extraction     Json?
+  /// Données renseignées (lecture de la pièce, transaction ou bexio).
   extracted_at   DateTime?
   /// Champs saisis à la main : jamais écrasés par une relecture.
   manual_fields  String[]
@@ -150,6 +166,7 @@ model ExpenseDB {
   ignore_reason    String?
   updated_at       DateTime  @updatedAt
 
+  receipt         ReceiptDB?            @relation(fields: [receipt_id], references: [id], onDelete: SetNull)
   payment_account PaymentAccountDB?     @relation(fields: [payment_account_id], references: [id])
   category        ExpenseCategoryDB?    @relation(fields: [category_id], references: [id])
   transaction     RevolutTransactionDB?
@@ -195,37 +212,6 @@ model RevolutTransactionDB {
   @@unique([revolut_id, leg_id])
   @@index([occurred_at])
   @@map("revolut_transactions")
-}
-
-/// Dépense de bexio (`GET 4.0/expenses`), relue à chaque synchronisation.
-model BexioExpenseDB {
-  /// UUID bexio
-  id                   String    @id
-  document_no          String
-  title                String?
-  vendor               String?
-  /// DRAFT | DONE
-  status               String
-  paid_on              DateTime? @db.Date
-  gross                Decimal   @db.Decimal(14, 2)
-  currency             String
-  booking_account_id   Int?
-  /// Résolus à la synchronisation (plan comptable, comptes bancaires).
-  booking_account_no   String?
-  booking_account_name String?
-  bank_account_id      Int?
-  /// N° du compte du plan comptable du compte bancaire payeur.
-  bank_account_no      String?
-  bank_account_name    String?
-  /// Compte de paiement choisi sur la dépense (gardé à la synchronisation).
-  payment_account_id   String?
-  /// Rapprochée dans bexio : la transaction bancaire.
-  transaction_id       String?
-  attachment_ids       String[]
-  synced_at            DateTime  @default(now())
-
-  @@index([paid_on])
-  @@map("bexio_expenses")
 }
 
 // ===== SYNCHRONISATIONS =====

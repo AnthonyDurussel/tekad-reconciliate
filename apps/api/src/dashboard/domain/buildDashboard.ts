@@ -1,6 +1,7 @@
 import {
   ExpenseStatusDTO,
   type AmountByKeyDTO,
+  ExpenseIssueDTO,
   type DashboardDTO,
   type ExpenseDTO,
   type RevolutTransactionDTO,
@@ -31,7 +32,7 @@ function group(
 }
 
 /**
- * Tableau de bord d'une période : pièces par statut, montants CHF par compte
+ * Tableau de bord d'une période : dépenses par statut et liens manquants, montants CHF par compte
  * et par type (pièces ignorées exclues), sorties Revolut sans pièce.
  */
 export function buildDashboard(
@@ -49,10 +50,17 @@ export function buildDashboard(
   const missingChf = missing
     .filter((t) => t.currency === "CHF")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const issue = (i: ExpenseIssueDTO) =>
+    expenses.filter((e) => e.issues.includes(i)).length;
   return {
     from,
     to,
     byStatus,
+    issues: {
+      missingReceipt: issue(ExpenseIssueDTO.MISSING_RECEIPT),
+      notInBexio: issue(ExpenseIssueDTO.NOT_IN_BEXIO),
+      notReconciled: issue(ExpenseIssueDTO.NOT_RECONCILED),
+    },
     byAccount: group(
       counted,
       (r) => r.paymentAccountId,

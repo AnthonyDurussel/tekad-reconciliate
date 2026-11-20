@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ExpenseStatusDTO, type ExpenseDTO, type RevolutTransactionDTO } from "@repo/models";
+import { ExpenseIssueDTO, ExpenseStatusDTO, type ExpenseDTO, type RevolutTransactionDTO } from "@repo/models";
 import { buildDashboard } from "@/dashboard/domain/buildDashboard.js";
 
 const exp = (over: Partial<ExpenseDTO>): ExpenseDTO =>
@@ -10,6 +10,7 @@ const exp = (over: Partial<ExpenseDTO>): ExpenseDTO =>
     categoryId: "tel",
     categoryLabel: "Télécom",
     booking: { amountChf: 10 },
+    issues: [],
     ...over,
   }) as ExpenseDTO;
 
@@ -19,7 +20,7 @@ describe("buildDashboard", () => {
       "2026-11-01",
       "2026-11-30",
       [
-        exp({}),
+        exp({ issues: [ExpenseIssueDTO.MISSING_RECEIPT, ExpenseIssueDTO.NOT_IN_BEXIO] }),
         exp({ booking: { amountChf: 5 } as ExpenseDTO["booking"], categoryId: null, categoryLabel: null }),
         exp({ status: ExpenseStatusDTO.IGNORED, booking: { amountChf: 100 } as ExpenseDTO["booking"] }),
         exp({ paymentAccountId: null, paymentAccountName: null, status: ExpenseStatusDTO.NEW, booking: { amountChf: null } as ExpenseDTO["booking"] }),
@@ -33,6 +34,7 @@ describe("buildDashboard", () => {
       { key: null, label: "Non classé", count: 1, amountChf: 0 },
     ]);
     expect(d.byCategory.map((c) => c.label)).toEqual(["Télécom", "Sans type"]);
+    expect(d.issues).toEqual({ missingReceipt: 1, notInBexio: 1, notReconciled: 0 });
     expect(d.missingReceipts).toEqual({ count: 1, amountChf: 12.5 });
   });
 });

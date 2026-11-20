@@ -2,10 +2,13 @@ import { randomUUID } from "node:crypto";
 import { inject, injectable } from "inversify";
 import {
   BookingModeDTO,
+  ExpenseIssueDTO,
   autoMatch,
+  type BexioExpenseDTO,
   rankCandidates,
   ExpenseStatusDTO,
   type ExtractionDTO,
+  type ReceiptDTO,
   type UpdateExpenseDTO,
 } from "@repo/models";
 import {
@@ -16,7 +19,11 @@ import {
 import { dayToDate } from "@/shared/domain/dates.js";
 import { log } from "@/shared/infrastructure/logging/logger.js";
 import type { StoredFile } from "@/shared/application/ports/StoredFile.js";
-import { Expense, type ExpenseContext } from "@/expense/domain/Expense.js";
+import {
+  Expense,
+  type ExpenseContext,
+  type ReceiptProps,
+} from "@/expense/domain/Expense.js";
 import type {
   ExpenseFilter,
   IExpenseRepository,
@@ -33,7 +40,11 @@ import type { IBexioGateway } from "@/bexio/application/ports/IBexioGateway.js";
 import { BEXIO_TYPES } from "@/bexio/infrastructure/ioc/types.bexio.js";
 import type { IReceiptReader } from "@/extraction/application/ports/IReceiptReader.js";
 import { EXTRACTION_TYPES } from "@/extraction/infrastructure/ioc/types.extraction.js";
+import type { BexioExpenseUseCases } from "@/bexio-expense/application/BexioExpenseUseCases.js";
+import { BEXIO_EXPENSE_TYPES } from "@/bexio-expense/infrastructure/ioc/types.bexio-expense.js";
 
+/** Fenêtre de recherche d'une dépense bexio autour de la date (jours). */
+const BEXIO_WINDOW_DAYS = 10;
 /** Fenêtre de recherche d'une transaction autour de la date du ticket. */
 const MATCH_WINDOW_DAYS = 6;
 /** Pièces lues par passage (une lecture prend quelques secondes). */
@@ -45,14 +56,31 @@ const matchable = (t: RevolutTransactionProps): Matchable => ({
   date: t.occurredAt.toISOString().slice(0, 10),
 });
 
+export const receiptDTO = (
+  r: Readonly<ReceiptProps>,
+  expenseId: string | null,
+): ReceiptDTO => ({
+  id: r.id,
+  bexioFileId: r.bexioFileId,
+  bexioFileUuid: r.bexioFileUuid,
+  fileName: r.fileName,
+  mimeType: r.mimeType,
+  importedAt: r.importedAt.toISOString(),
+  extractedAt: r.extractedAt?.toISOString() ?? null,
+  extraction: r.extraction,
+  expenseId,
+});
+
 export interface ExpenseView {
   expense: Expense;
   ctx: ExpenseContext;
 }
 
 /**
- * Les pièces : import de l'inbox bexio, lecture, classement, rapprochement
- * Revolut, comptabilisation dans bexio.
+ * Les dépenses, élément central : chacune porte sa pièce (importée de
+ * l'inbox bexio, lue), sa dépense bexio (lue en direct) et, pour un compte
+ * rapproché par relevé, sa transaction. Une dépense naît d'une pièce, d'une
+ * sortie de relevé ou d'une dépense bexio ; les autres liens se posent ensuite.
  */
 @injectable()
 export class ExpenseUseCases {
@@ -70,6 +98,8 @@ export class ExpenseUseCases {
     private transactions: IRevolutTransactionRepository,
     @inject(BEXIO_TYPES.IBexioGateway) private bexio: IBexioGateway,
     @inject(EXTRACTION_TYPES.IReceiptReader) private reader: IReceiptReader,
+    @inject(BEXIO_EXPENSE_TYPES.BexioExpenseUseCases)
+    private bexioExpenses: BexioExpenseUseCases,
   ) {}
 
   /** Paramétrage lu une fois par requête. */
@@ -102,7 +132,25 @@ export class ExpenseUseCases {
     return this.bexio.configured;
   }
 
-  async list(filter: ExpenseFilter): Promise<ExpenseView[]> {
+  /** Les liens à faire d'une dépense (pièce, bexio, rapprochement). */
+  issues({ expense, ctx }: ExpenseView): ExpenseIssueDTO[] {
+    return expense.issues(ctx);
+  }
+
+  async list(
+    filter: ExpenseFilter & { issue?: ExpenseIssueDTO | "ok" },
+  ): Promise<ExpenseView[]> {
+    const views = await this.listAll(filter);
+    if (!filter.issue) return views;
+    return views.filter((v) => {
+      const issues = this.issues(v);
+      return filter.issue === "ok"
+        ? issues.length === 0
+        : issues.includes(filter.issue as ExpenseIssueDTO);
+    });
+  }
+
+  private async listAll(filter: ExpenseFilter): Promise<ExpenseView[]> {
     const [list, { accounts, categories }] = await Promise.all([
       this.expenses.list(filter),
       this.loadSettings(),
@@ -127,9 +175,31 @@ export class ExpenseUseCases {
     return this.load(id);
   }
 
+  /** Le fichier de la pièce de la dépense. */
   async file(id: string): Promise<StoredFile> {
     const { expense } = await this.load(id);
-    return this.bexio.downloadFile(expense.snapshot.bexioFileId);
+    if (!expense.receipt) throw new NotFoundError("Receipt");
+    return this.receiptFile(expense.receipt);
+  }
+
+  /** Le fichier d'une pièce (aperçu avant de la rattacher). */
+  async receiptFileById(receiptId: string): Promise<StoredFile> {
+    const receipt = await this.expenses.findReceipt(receiptId);
+    if (!receipt) throw new NotFoundError("Receipt");
+    return this.receiptFile(receipt);
+  }
+
+  private async receiptFile(receipt: {
+    bexioFileId: string;
+    fileName: string;
+    mimeType: string | null;
+  }): Promise<StoredFile> {
+    const file = await this.bexio.downloadFile(receipt.bexioFileId);
+    return {
+      ...file,
+      fileName: receipt.fileName,
+      mimeType: receipt.mimeType ?? file.mimeType,
+    };
   }
 
   async update(id: string, patch: UpdateExpenseDTO): Promise<ExpenseView> {
@@ -141,7 +211,7 @@ export class ExpenseUseCases {
     return this.load(id);
   }
 
-  /** Relit la pièce (Claude), reclasse, cherche sa transaction Revolut. */
+  /** Relit la pièce (IA), reclasse, cherche sa transaction de relevé. */
   async extract(id: string): Promise<ExpenseView> {
     const view = await this.load(id);
     await this.readAndClassify(view);
@@ -150,9 +220,13 @@ export class ExpenseUseCases {
 
   private async readAndClassify(view: ExpenseView): Promise<void> {
     const { expense, ctx } = view;
+    const receipt = expense.receipt;
+    if (!receipt) {
+      throw new InvalidStateError("cette dépense n'a pas de pièce à lire");
+    }
     let extraction: ExtractionDTO;
     try {
-      const file = await this.bexio.downloadFile(expense.snapshot.bexioFileId);
+      const file = await this.receiptFile(receipt);
       extraction = await this.reader.read(file, {
         categories: ctx.categories
           .filter((c) => c.active)
@@ -164,7 +238,7 @@ export class ExpenseUseCases {
     } catch (error) {
       if (error instanceof ConflictError && !(await this.reader.isConfigured()))
         throw error;
-      log.warn(`[extraction] ${expense.snapshot.fileName}`, error);
+      log.warn(`[extraction] ${receipt.fileName}`, error);
       extraction = {
         merchant: null,
         date: null,
@@ -212,7 +286,7 @@ export class ExpenseUseCases {
       if (!transaction) throw new NotFoundError("Revolut transaction");
       if (transaction.expenseId && transaction.expenseId !== id) {
         throw new ConflictError(
-          "cette transaction est déjà rapprochée d'une autre pièce",
+          "cette transaction est déjà rapprochée d'une autre dépense",
         );
       }
     }
@@ -266,7 +340,7 @@ export class ExpenseUseCases {
   async book(id: string, userId: string | null): Promise<ExpenseView> {
     const { expense, ctx } = await this.load(id);
     if (expense.status !== ExpenseStatusDTO.READY) {
-      throw new InvalidStateError("seule une pièce prête se comptabilise");
+      throw new InvalidStateError("seule une dépense prête se comptabilise");
     }
     const booking = expense.booking(ctx);
     if (booking.missing.length) {
@@ -294,12 +368,11 @@ export class ExpenseUseCases {
         });
       } else {
         // Sans compte bancaire (compte courant…) : écriture manuelle.
-        const file = await this.bexio.downloadFile(
-          expense.snapshot.bexioFileId,
-        );
+        const receipt = expense.receipt!;
+        const file = await this.receiptFile(receipt);
         entryId = await this.bexio.createManualEntry({
           date: booking.date!,
-          reference: expense.snapshot.fileName,
+          reference: receipt.fileName,
           description: booking.description,
           amountChf: booking.amountChf!,
           debitAccountNo: booking.debitAccountNo!,
@@ -316,8 +389,10 @@ export class ExpenseUseCases {
 
   /** L'UUID du fichier de la pièce (lu dans bexio s'il manque). */
   private async fileUuid(expense: Expense): Promise<string> {
-    if (expense.snapshot.bexioFileUuid) return expense.snapshot.bexioFileUuid;
-    const uuid = await this.bexio.fileUuid(expense.snapshot.bexioFileId);
+    const receipt = expense.receipt;
+    if (!receipt) throw new InvalidStateError("cette dépense n'a pas de pièce");
+    if (receipt.bexioFileUuid) return receipt.bexioFileUuid;
+    const uuid = await this.bexio.fileUuid(receipt.bexioFileId);
     expense.setFileUuid(uuid);
     return uuid;
   }
@@ -350,7 +425,265 @@ export class ExpenseUseCases {
     return this.load(id);
   }
 
+  // ---------------------------------------------------- création
+
+  /** Une dépense pour une sortie de relevé (sa pièce viendra ensuite). */
+  async createFromTransaction(transactionId: string): Promise<ExpenseView> {
+    const tx = await this.transactions.findById(transactionId);
+    if (!tx) throw new NotFoundError("Revolut transaction");
+    if (tx.expenseId) {
+      throw new ConflictError("cette transaction a déjà sa dépense");
+    }
+    const { accounts, categories } = await this.loadSettings();
+    const expense = Expense.fromTransaction(randomUUID(), tx, {
+      accounts,
+      categories,
+      transaction: tx,
+    });
+    await this.expenses.create(expense);
+    await this.transactions.setExpense(tx.id, expense.id);
+    return this.load(expense.id);
+  }
+
+  /**
+   * Une dépense pour une dépense bexio : si l'un de ses fichiers joints est
+   * la pièce d'une dépense d'ici, c'est celle-ci qu'on y rattache.
+   */
+  async createFromBexio(bexioExpenseId: string): Promise<ExpenseView> {
+    const bexio = await this.bexioExpenses.find(bexioExpenseId);
+    if (bexio.expenseId) {
+      throw new ConflictError("cette dépense bexio a déjà sa dépense");
+    }
+    const withFile = (
+      await this.expenses.findByFileUuids(bexio.attachmentIds)
+    ).find((e) => !e.snapshot.bexioExpenseId && e.status !== "IGNORED");
+    if (withFile) {
+      withFile.linkBexioExpense(bexio.id);
+      await this.expenses.save(withFile);
+      return this.load(withFile.id);
+    }
+    const { accounts, categories } = await this.loadSettings();
+    const expense = Expense.fromBexio(
+      randomUUID(),
+      {
+        bexioExpenseId: bexio.id,
+        paidOn: bexio.paidOn,
+        gross: bexio.gross,
+        currency: bexio.currency,
+        vendor: bexio.vendor,
+        title: bexio.title,
+        bookingAccountNo: bexio.bookingAccountNo,
+        paymentAccountId: bexio.paymentAccountId,
+      },
+      { accounts, categories, transaction: null },
+    );
+    await this.expenses.create(expense);
+    const ctx = await this.context(expense);
+    await this.tryAutoMatch(expense, ctx, new Set());
+    return this.load(expense.id);
+  }
+
+  // ---------------------------------------------------- pièce
+
+  /**
+   * Les pièces qu'on peut rattacher : celles sans dépense et celles dont la
+   * dépense n'a rien d'autre (ni transaction, ni bexio, ni comptabilisation).
+   */
+  async receiptCandidates(id: string): Promise<ReceiptDTO[]> {
+    await this.load(id);
+    const [orphans, lone] = await Promise.all([
+      this.expenses.listUnlinkedReceipts(),
+      this.expenses.listLoneReceiptExpenses(),
+    ]);
+    return [
+      ...orphans.map((r) => receiptDTO(r, null)),
+      ...lone
+        .filter((e) => e.id !== id && e.receipt)
+        .map((e) => receiptDTO(e.receipt!, e.id)),
+    ];
+  }
+
+  /**
+   * Rattache une pièce : une pièce seule (sa dépense n'a rien d'autre) quitte
+   * sa dépense, qui disparaît. Si la dépense est déjà dans bexio, le fichier
+   * y est joint.
+   */
+  async linkReceipt(id: string, receiptId: string): Promise<ExpenseView> {
+    const view = await this.load(id);
+    const receipt = await this.expenses.findReceipt(receiptId);
+    if (!receipt) throw new NotFoundError("Receipt");
+    if (receipt.expenseId === id) return view;
+    if (receipt.expenseId) {
+      const owner = await this.expenses.findById(receipt.expenseId);
+      if (owner && !owner.isLoneReceipt()) {
+        throw new ConflictError(
+          "cette pièce appartient déjà à une autre dépense",
+        );
+      }
+      await this.expenses.delete(receipt.expenseId);
+    }
+    const { expenseId: _owner, ...props } = receipt;
+    view.expense.attachReceipt(props, view.ctx);
+    await this.expenses.save(view.expense);
+    if (view.expense.snapshot.bexioExpenseId) {
+      await this.attachToBexio(
+        view.expense,
+        view.expense.snapshot.bexioExpenseId,
+      );
+    }
+    await this.tryAutoMatch(view.expense, view.ctx, new Set());
+    return this.load(id);
+  }
+
+  /**
+   * Détache la pièce : elle retrouve une dépense à elle (chaque pièce a sa
+   * dépense). Le fichier reste joint dans bexio s'il l'était.
+   */
+  async unlinkReceipt(id: string): Promise<ExpenseView> {
+    const view = await this.load(id);
+    const receipt = view.expense.detachReceipt(view.ctx);
+    if (!receipt) return view;
+    await this.expenses.save(view.expense);
+    const own = Expense.importFromInbox({
+      id: randomUUID(),
+      receiptId: receipt.id,
+      bexioFileId: receipt.bexioFileId,
+      bexioFileUuid: receipt.bexioFileUuid,
+      fileName: receipt.fileName,
+      mimeType: receipt.mimeType,
+      now: receipt.importedAt,
+    });
+    const ctx = {
+      accounts: view.ctx.accounts,
+      categories: view.ctx.categories,
+      transaction: null,
+    };
+    if (receipt.extraction) {
+      own.applyExtraction(
+        receipt.extraction,
+        ctx,
+        receipt.extractedAt ?? new Date(),
+      );
+    }
+    await this.expenses.create(own);
+    return this.load(id);
+  }
+
+  // ---------------------------------------------------- dépense bexio
+
+  /** Les dépenses bexio proches (date, montant) et libres, la plus probable d'abord. */
+  async bexioCandidates(id: string): Promise<BexioExpenseDTO[]> {
+    const { expense } = await this.load(id);
+    const s = expense.snapshot;
+    if (!s.date) return [];
+    const date = dayToDate(s.date)!;
+    const ms = BEXIO_WINDOW_DAYS * 86_400_000;
+    const day = (d: Date) => d.toISOString().slice(0, 10);
+    const list = await this.bexioExpenses.list({
+      from: day(new Date(date.getTime() - ms)),
+      to: day(new Date(date.getTime() + ms)),
+    });
+    const uuid = expense.receipt?.bexioFileUuid ?? null;
+    const amount = s.totalAmount;
+    const score = (b: BexioExpenseDTO) =>
+      (uuid && b.attachmentIds.includes(uuid) ? -1e9 : 0) +
+      (amount !== null ? Math.abs(Math.abs(b.gross) - amount) * 100 : 0) +
+      Math.abs(
+        (dayToDate(b.paidOn ?? s.date)!.getTime() - date.getTime()) /
+          86_400_000,
+      );
+    return list
+      .filter((b) => !b.expenseId)
+      .sort((a, b) => score(a) - score(b))
+      .slice(0, 10);
+  }
+
+  /**
+   * Rattache une dépense bexio existante : la pièce y est jointe si elle
+   * n'y est pas, et la dépense est comptabilisée (par bexio).
+   */
+  async linkBexio(id: string, bexioExpenseId: string): Promise<ExpenseView> {
+    const view = await this.load(id);
+    const bexio = await this.bexioExpenses.find(bexioExpenseId);
+    if (bexio.expenseId && bexio.expenseId !== id) {
+      throw new ConflictError(
+        "cette dépense bexio est rattachée à une autre dépense",
+      );
+    }
+    view.expense.linkBexioExpense(bexio.id);
+    if (view.expense.receipt) {
+      await this.attachToBexio(view.expense, bexio.id, bexio.attachmentIds);
+    }
+    await this.expenses.save(view.expense);
+    return this.load(id);
+  }
+
+  /** Défait le lien ici (rien n'est changé dans bexio). */
+  async unlinkBexio(id: string): Promise<ExpenseView> {
+    const view = await this.load(id);
+    view.expense.unlinkBexioExpense(view.ctx);
+    await this.expenses.save(view.expense);
+    return this.load(id);
+  }
+
+  /** Joint le fichier de la pièce à la dépense bexio s'il n'y est pas. */
+  private async attachToBexio(
+    expense: Expense,
+    bexioExpenseId: string,
+    attachmentIds?: string[],
+  ): Promise<void> {
+    const uuid = await this.fileUuid(expense);
+    const current =
+      attachmentIds ??
+      (await this.bexioExpenses.find(bexioExpenseId)).attachmentIds;
+    if (!current.includes(uuid)) {
+      await this.bexio.attachFilesToExpense(bexioExpenseId, [uuid]);
+    }
+    await this.expenses.save(expense);
+  }
+
   // ---------------------------------------------------- synchronisations
+
+  /**
+   * Relit les dépenses bexio : rattache chaque dépense dont le fichier de la
+   * pièce y est joint, détache celles dont la dépense bexio a disparu.
+   * Rend le nombre de dépenses nouvellement rattachées.
+   */
+  async linkBexioExpenses(): Promise<number> {
+    const list = await this.bexio.listExpenses();
+    const ids = new Set(list.map((e) => e.id));
+    const linked = await this.expenses.listLinkedToBexio();
+    for (const expense of linked) {
+      if (ids.has(expense.snapshot.bexioExpenseId!)) continue;
+      expense.unlinkBexioExpense(await this.context(expense));
+      await this.expenses.save(expense);
+    }
+    const taken = new Set(linked.map((e) => e.snapshot.bexioExpenseId!));
+    const byUuid = new Map(
+      (
+        await this.expenses.findByFileUuids(
+          list.flatMap((e) => e.attachmentIds),
+        )
+      )
+        .filter((e) => !e.snapshot.bexioExpenseId && e.status !== "IGNORED")
+        .map((e) => [e.receipt!.bexioFileUuid!, e]),
+    );
+    let count = 0;
+    for (const bexio of list) {
+      if (taken.has(bexio.id)) continue;
+      const expense = bexio.attachmentIds
+        .map((uuid) => byUuid.get(uuid))
+        .find((e) => e && !e.snapshot.bexioExpenseId);
+      if (!expense) continue;
+      expense.linkBexioExpense(bexio.id);
+      await this.expenses.save(expense);
+      taken.add(bexio.id);
+      count++;
+    }
+    return count;
+  }
+
+  // ----------------------------------------------------
 
   /** Nouvelles pièces de l'inbox bexio ; rend leur nombre. */
   async importInbox(): Promise<number> {
@@ -370,6 +703,7 @@ export class ExpenseUseCases {
       await this.expenses.create(
         Expense.importFromInbox({
           id: randomUUID(),
+          receiptId: randomUUID(),
           bexioFileId: file.id,
           bexioFileUuid: file.uuid,
           fileName: file.name,
@@ -388,10 +722,7 @@ export class ExpenseUseCases {
         "la lecture des pièces n'est pas configurée (Administration → Intelligence artificielle)",
       );
     }
-    const pending = await this.expenses.listByStatus(
-      [ExpenseStatusDTO.NEW],
-      limit,
-    );
+    const pending = await this.expenses.listUnreadReceiptExpenses(limit);
     for (const expense of pending) {
       await this.readAndClassify({ expense, ctx: await this.context(expense) });
     }

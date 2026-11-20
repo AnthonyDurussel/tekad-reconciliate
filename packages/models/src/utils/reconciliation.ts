@@ -8,6 +8,7 @@ import {
   ReconciliationModeDTO,
 } from "../@types/dto/settings.dto.js";
 import {
+  ExpenseIssueDTO,
   ExpenseStatusDTO,
   type BookingProposalDTO,
 } from "../@types/dto/expense.dto.js";
@@ -27,7 +28,9 @@ const CARD_PATTERNS: RegExp[] = [
  * 4 derniers chiffres d'une carte dans le texte d'un ticket (« **** 1234 »,
  * « XXXXXXXXXXXX1234 », « Carte : ...1234 »). `null` si rien de sûr.
  */
-export function detectCardLast4(text: string | null | undefined): string | null {
+export function detectCardLast4(
+  text: string | null | undefined,
+): string | null {
   if (!text) return null;
   for (const pattern of CARD_PATTERNS) {
     const match = pattern.exec(text);
@@ -52,14 +55,17 @@ export function maskCardNumber(
   // Premiers chiffres connus (BIN) quand le numéro commence par eux.
   const lead = /^(\d{6})/.exec(raw)?.[1] ?? null;
   const length = Math.max(total, 16);
-  const masked = lead && digits.length >= 10
-    ? `${lead}${"*".repeat(Math.max(length - 10, 2))}${tail[1]}`
-    : `${"*".repeat(Math.max(length - 4, 4))}${tail[1]}`;
+  const masked =
+    lead && digits.length >= 10
+      ? `${lead}${"*".repeat(Math.max(length - 10, 2))}${tail[1]}`
+      : `${"*".repeat(Math.max(length - 4, 4))}${tail[1]}`;
   return { last4: tail[1], masked };
 }
 
 /** 4 derniers chiffres d'un numéro masqué Revolut (`459876******1234`). */
-export function last4OfMasked(masked: string | null | undefined): string | null {
+export function last4OfMasked(
+  masked: string | null | undefined,
+): string | null {
   if (!masked) return null;
   const digits = masked.replace(/\D/g, "");
   return digits.length >= 4 ? digits.slice(-4) : null;
@@ -80,7 +86,8 @@ export function accountForCard<T extends CardOwner>(
   return (
     accounts.find(
       (a) =>
-        a.active && a.cards.some((c) => c.active !== false && c.last4 === last4),
+        a.active &&
+        a.cards.some((c) => c.active !== false && c.last4 === last4),
     ) ?? null
   );
 }
@@ -98,8 +105,27 @@ export function normalizeText(value: string | null | undefined): string {
 }
 
 const STOP_WORDS = new Set([
-  "sa", "ag", "gmbh", "sarl", "ltd", "inc", "the", "de", "la", "le", "les",
-  "du", "des", "et", "und", "com", "www", "ch", "llc", "bv", "sas",
+  "sa",
+  "ag",
+  "gmbh",
+  "sarl",
+  "ltd",
+  "inc",
+  "the",
+  "de",
+  "la",
+  "le",
+  "les",
+  "du",
+  "des",
+  "et",
+  "und",
+  "com",
+  "www",
+  "ch",
+  "llc",
+  "bv",
+  "sas",
 ]);
 
 function tokens(value: string | null | undefined): Set<string> {
@@ -141,7 +167,11 @@ export interface CategoryRule {
  * description (le plus long gagne), sinon le code MCC de la transaction.
  */
 export function categoryByRules<T extends CategoryRule>(
-  input: { merchant?: string | null; description?: string | null; mcc?: string | null },
+  input: {
+    merchant?: string | null;
+    description?: string | null;
+    mcc?: string | null;
+  },
   categories: readonly T[],
 ): T | null {
   const haystack = ` ${normalizeText(`${input.merchant ?? ""} ${input.description ?? ""}`)} `;
@@ -150,7 +180,11 @@ export function categoryByRules<T extends CategoryRule>(
     if (!category.active) continue;
     for (const keyword of category.keywords) {
       const k = normalizeText(keyword);
-      if (k && haystack.includes(` ${k}`) && (!best || k.length > best.length)) {
+      if (
+        k &&
+        haystack.includes(` ${k}`) &&
+        (!best || k.length > best.length)
+      ) {
         best = { category, length: k.length };
       }
     }
@@ -240,7 +274,8 @@ export function scoreMatch(
   tx: MatchableTransaction,
 ): MatchScore {
   const reasons: string[] = [];
-  if (expense.totalAmount == null || !expense.date) return { score: 0, reasons };
+  if (expense.totalAmount == null || !expense.date)
+    return { score: 0, reasons };
   const amount = Math.abs(expense.totalAmount);
   const currency = (expense.currency ?? "CHF").toUpperCase();
   const sameAccountAmount =
@@ -288,7 +323,10 @@ export function rankCandidates<T extends MatchableTransaction>(
   transactions: readonly T[],
 ): { transaction: T; score: number; reasons: string[] }[] {
   return transactions
-    .map((transaction) => ({ transaction, ...scoreMatch(expense, transaction) }))
+    .map((transaction) => ({
+      transaction,
+      ...scoreMatch(expense, transaction),
+    }))
     .filter((c) => c.score > 0)
     .sort((a, b) => b.score - a.score);
 }
@@ -313,14 +351,20 @@ export interface StatusInput {
   paymentAccount: { reconciliation: ReconciliationModeDTO } | null;
   hasCategory: boolean;
   transactionId: string | null;
+  /** La dépense a sa pièce (défaut : oui). */
+  hasReceipt?: boolean;
 }
 
 /**
- * Ce qui manque à une pièce pour être comptabilisée (codes stables). Un
- * compte rapproché par import de relevé exige la transaction de la pièce.
+ * Ce qui manque à une dépense pour être comptabilisée (codes stables) : sa
+ * pièce (jointe dans bexio), et, pour un compte rapproché par import de
+ * relevé, sa transaction.
  */
-export function missingForBooking(input: Omit<StatusInput, "status" | "extracted">): string[] {
+export function missingForBooking(
+  input: Omit<StatusInput, "status" | "extracted">,
+): string[] {
   const missing: string[] = [];
+  if (input.hasReceipt === false) missing.push("receipt");
   if (!input.date) missing.push("date");
   if (input.totalAmount == null) missing.push("amount");
   if (!input.paymentAccount) missing.push("paymentAccount");
@@ -372,6 +416,7 @@ export interface BookingInput {
   creditAccountNo: string | null;
   bexioTaxId: number | null;
   transactionId: string | null;
+  hasReceipt?: boolean;
 }
 
 /**
@@ -391,7 +436,10 @@ export function bookingProposal(input: BookingInput): BookingProposalDTO {
     input.debitAccountNo ?? input.category?.bexioAccountNo ?? null;
   const creditAccountNo =
     input.creditAccountNo ?? input.paymentAccount?.bexioAccountNo ?? null;
-  const description = [input.merchant, input.description ?? input.category?.label]
+  const description = [
+    input.merchant,
+    input.description ?? input.category?.label,
+  ]
     .filter(Boolean)
     .join(" — ");
   const missing = missingForBooking({
@@ -400,8 +448,10 @@ export function bookingProposal(input: BookingInput): BookingProposalDTO {
     paymentAccount: input.paymentAccount,
     hasCategory: !!input.category || !!input.debitAccountNo,
     transactionId: input.transactionId,
+    hasReceipt: input.hasReceipt,
   });
-  if (amountChf == null && !missing.includes("amount")) missing.push("amountChf");
+  if (amountChf == null && !missing.includes("amount"))
+    missing.push("amountChf");
   if (!debitAccountNo) missing.push("debitAccount");
   if (!creditAccountNo) missing.push("creditAccount");
   return {
@@ -415,4 +465,38 @@ export function bookingProposal(input: BookingInput): BookingProposalDTO {
     vatRate: input.category?.vatRate ?? null,
     missing: [...new Set(missing)],
   };
+}
+
+// ------------------------------------------------------- dépense : rattachements
+
+/**
+ * Ce qui manque à une dépense (l'élément central) : sa pièce, sa dépense
+ * bexio, et sa transaction de relevé quand son compte se rapproche par
+ * import. Une dépense ignorée n'a rien à faire.
+ */
+export function expenseIssues(input: {
+  status: ExpenseStatusDTO;
+  hasReceipt: boolean;
+  bexioExpenseId: string | null;
+  bexioEntryId: string | null;
+  reconciliation: ReconciliationModeDTO | null;
+  transactionId: string | null;
+}): ExpenseIssueDTO[] {
+  if (input.status === ExpenseStatusDTO.IGNORED) return [];
+  const issues: ExpenseIssueDTO[] = [];
+  if (!input.hasReceipt) issues.push(ExpenseIssueDTO.MISSING_RECEIPT);
+  if (
+    !input.bexioExpenseId &&
+    !input.bexioEntryId &&
+    input.status !== ExpenseStatusDTO.BOOKED
+  ) {
+    issues.push(ExpenseIssueDTO.NOT_IN_BEXIO);
+  }
+  if (
+    input.reconciliation === ReconciliationModeDTO.STATEMENT_IMPORT &&
+    !input.transactionId
+  ) {
+    issues.push(ExpenseIssueDTO.NOT_RECONCILED);
+  }
+  return issues;
 }

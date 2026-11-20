@@ -1,8 +1,11 @@
 import {
   accountForCard,
+  expenseIssues,
+  ExpenseIssueDTO,
   bookingProposal,
   categoryByRules,
   expenseStatus,
+  ExpenseSourceDTO,
   ExpenseStatusDTO,
   ReconciliationModeDTO,
   SuggestionSourceDTO,
@@ -29,15 +32,26 @@ export const READ_FIELDS = [
 ] as const;
 type ReadField = (typeof READ_FIELDS)[number];
 
-export interface ExpenseProps {
+/** La pièce rattachée : un fichier de l'inbox bexio et sa lecture. */
+export interface ReceiptProps {
   id: string;
-  status: ExpenseStatusDTO;
   bexioFileId: string;
-  /** UUID du fichier bexio (lien des dépenses bexio). */
+  /** UUID du fichier bexio (les dépenses bexio joignent les fichiers par UUID). */
   bexioFileUuid: string | null;
   fileName: string;
   mimeType: string | null;
   importedAt: Date;
+  extraction: ExtractionDTO | null;
+  extractedAt: Date | null;
+}
+
+export interface ExpenseProps {
+  id: string;
+  status: ExpenseStatusDTO;
+  source: ExpenseSourceDTO;
+  createdAt: Date;
+  /** La pièce rattachée (`null` : dépense sans pièce). */
+  receipt: ReceiptProps | null;
 
   date: string | null;
   merchant: string | null;
@@ -48,7 +62,7 @@ export interface ExpenseProps {
   vatRate: number | null;
   cardLast4: string | null;
   paymentMethod: string | null;
-  extraction: ExtractionDTO | null;
+  /** Données renseignées (lecture de la pièce, transaction ou bexio). */
   extractedAt: Date | null;
   manualFields: string[];
 
@@ -78,61 +92,153 @@ export interface ExpenseContext {
   transaction: RevolutTransactionProps | null;
 }
 
+/** Une dépense vide, à compléter par la fabrique qui l'appelle. */
+function blank(id: string, source: ExpenseSourceDTO, now: Date): ExpenseProps {
+  return {
+    id,
+    status: ExpenseStatusDTO.NEW,
+    source,
+    createdAt: now,
+    receipt: null,
+    date: null,
+    merchant: null,
+    description: null,
+    totalAmount: null,
+    currency: null,
+    vatAmount: null,
+    vatRate: null,
+    cardLast4: null,
+    paymentMethod: null,
+    extractedAt: null,
+    manualFields: [],
+    paymentAccountId: null,
+    paymentAccountSource: null,
+    categoryId: null,
+    categorySource: null,
+    debitAccountNo: null,
+    creditAccountNo: null,
+    bexioTaxId: null,
+    transactionId: null,
+    bexioEntryId: null,
+    bexioExpenseId: null,
+    bookedAt: null,
+    bookedById: null,
+    note: null,
+    ignoreReason: null,
+  };
+}
+
+/** Ce qu'une dépense bexio apporte à la dépense créée pour elle. */
+export interface BexioExpenseData {
+  bexioExpenseId: string;
+  paidOn: string | null;
+  gross: number;
+  currency: string;
+  vendor: string | null;
+  title: string | null;
+  bookingAccountNo: string | null;
+  paymentAccountId: string | null;
+}
+
 /**
- * Pièce de l'inbox bexio. Toute modification finit par `refresh()` : le
- * compte, le type et le statut se recalculent ; une valeur saisie (MANUAL)
- * n'est jamais remplacée par une proposition.
+ * La dépense : l'élément central. Elle porte sa pièce (fichier + lecture),
+ * sa dépense bexio et sa transaction de relevé. Toute modification finit par
+ * `refresh()` : le compte, le type et le statut se recalculent ; une valeur
+ * saisie (MANUAL) n'est jamais remplacée par une proposition.
  */
 export class Expense {
   private constructor(private props: ExpenseProps) {}
 
   static restore(props: ExpenseProps): Expense {
-    return new Expense({ ...props, manualFields: [...props.manualFields] });
+    return new Expense({
+      ...props,
+      receipt: props.receipt ? { ...props.receipt } : null,
+      manualFields: [...props.manualFields],
+    });
   }
 
+  /** Une pièce arrive de l'inbox bexio : sa dépense naît avec elle. */
   static importFromInbox(input: {
     id: string;
+    receiptId: string;
     bexioFileId: string;
     bexioFileUuid?: string | null;
     fileName: string;
     mimeType: string | null;
     now?: Date;
   }): Expense {
+    const now = input.now ?? new Date();
     return new Expense({
-      id: input.id,
-      status: ExpenseStatusDTO.NEW,
-      bexioFileId: input.bexioFileId,
-      bexioFileUuid: input.bexioFileUuid ?? null,
-      fileName: input.fileName,
-      mimeType: input.mimeType,
-      importedAt: input.now ?? new Date(),
-      date: null,
-      merchant: null,
-      description: null,
-      totalAmount: null,
-      currency: null,
-      vatAmount: null,
-      vatRate: null,
-      cardLast4: null,
-      paymentMethod: null,
-      extraction: null,
-      extractedAt: null,
-      manualFields: [],
-      paymentAccountId: null,
-      paymentAccountSource: null,
-      categoryId: null,
-      categorySource: null,
-      debitAccountNo: null,
-      creditAccountNo: null,
-      bexioTaxId: null,
-      transactionId: null,
-      bexioEntryId: null,
-      bexioExpenseId: null,
-      bookedAt: null,
-      bookedById: null,
-      note: null,
-      ignoreReason: null,
+      ...blank(input.id, ExpenseSourceDTO.RECEIPT, now),
+      receipt: {
+        id: input.receiptId,
+        bexioFileId: input.bexioFileId,
+        bexioFileUuid: input.bexioFileUuid ?? null,
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        importedAt: now,
+        extraction: null,
+        extractedAt: null,
+      },
     });
+  }
+
+  /** Une sortie de relevé sans pièce : la dépense à justifier. */
+  static fromTransaction(
+    id: string,
+    tx: RevolutTransactionProps,
+    ctx: ExpenseContext,
+    now = new Date(),
+  ): Expense {
+    const e = new Expense({
+      ...blank(id, ExpenseSourceDTO.TRANSACTION, now),
+      date: tx.occurredAt.toISOString().slice(0, 10),
+      merchant: tx.merchantName ?? tx.description,
+      totalAmount: Math.abs(tx.billAmount ?? tx.amount),
+      currency: (tx.billCurrency ?? tx.currency).toUpperCase(),
+      cardLast4: tx.cardLast4,
+      paymentMethod: tx.cardLast4 ? "card" : null,
+      transactionId: tx.id,
+      extractedAt: now,
+    });
+    e.refresh({ ...ctx, transaction: tx });
+    return e;
+  }
+
+  /** Une dépense saisie dans bexio : déjà comptabilisée, à rattacher ici. */
+  static fromBexio(
+    id: string,
+    data: BexioExpenseData,
+    ctx: ExpenseContext,
+    now = new Date(),
+  ): Expense {
+    const category = data.bookingAccountNo
+      ? ctx.categories.find(
+          (c) => c.active && c.bexioAccountNo === data.bookingAccountNo,
+        )
+      : undefined;
+    const e = new Expense({
+      ...blank(id, ExpenseSourceDTO.BEXIO, now),
+      date: data.paidOn,
+      merchant: data.vendor ?? data.title,
+      description: data.vendor ? data.title : null,
+      totalAmount: data.gross,
+      currency: data.currency.toUpperCase(),
+      extractedAt: now,
+      paymentAccountId: data.paymentAccountId,
+      paymentAccountSource: data.paymentAccountId
+        ? SuggestionSourceDTO.MANUAL
+        : null,
+      categoryId: category?.id ?? null,
+      categorySource: category ? SuggestionSourceDTO.MANUAL : null,
+      debitAccountNo: category ? null : data.bookingAccountNo,
+      manualFields: ["date", "merchant", "totalAmount", "currency"],
+    });
+    e.refresh(ctx);
+    e.props.status = ExpenseStatusDTO.BOOKED;
+    e.props.bexioExpenseId = data.bexioExpenseId;
+    e.props.bookedAt = now;
+    return e;
   }
 
   get snapshot(): Readonly<ExpenseProps> {
@@ -150,22 +256,38 @@ export class Expense {
   get extracted(): boolean {
     return this.props.extractedAt !== null;
   }
+  get receipt(): Readonly<ReceiptProps> | null {
+    return this.props.receipt;
+  }
+  get extraction(): ExtractionDTO | null {
+    return this.props.receipt?.extraction ?? null;
+  }
 
   private assertEditable(): void {
     if (this.props.status === ExpenseStatusDTO.BOOKED) {
       throw new InvalidStateError(
-        "pièce comptabilisée : annulez d'abord la comptabilisation",
+        "dépense comptabilisée : annulez d'abord la comptabilisation",
       );
     }
   }
 
-  /** Résultat de la lecture : remplit ce qui n'a pas été saisi à la main. */
+  /**
+   * Résultat de la lecture de la pièce : remplit ce qui n'a pas été saisi à
+   * la main. Une dépense déjà renseignée par sa transaction ou par bexio ne
+   * prend que les champs encore vides.
+   */
   applyExtraction(
     extraction: ExtractionDTO,
     ctx: ExpenseContext,
     now = new Date(),
+    onlyEmpty = this.props.source !== ExpenseSourceDTO.RECEIPT,
   ): void {
-    this.assertEditable();
+    if (!this.props.receipt) {
+      throw new InvalidStateError("cette dépense n'a pas de pièce à lire");
+    }
+    this.props.receipt.extraction = extraction;
+    this.props.receipt.extractedAt = now;
+    if (this.props.status === ExpenseStatusDTO.BOOKED) return;
     const values: Record<ReadField, unknown> = {
       date: extraction.date,
       merchant: extraction.merchant,
@@ -177,15 +299,41 @@ export class Expense {
       cardLast4: extraction.cardLast4,
       paymentMethod: extraction.paymentMethod,
     };
+    const p = this.props as unknown as Record<string, unknown>;
     for (const field of READ_FIELDS) {
-      if (!this.props.manualFields.includes(field)) {
-        (this.props as unknown as Record<string, unknown>)[field] =
-          values[field] ?? null;
-      }
+      if (this.props.manualFields.includes(field)) continue;
+      if (!onlyEmpty) p[field] = values[field] ?? null;
+      else if (p[field] === null) p[field] = values[field] ?? null;
     }
-    this.props.extraction = extraction;
-    this.props.extractedAt = now;
+    this.props.extractedAt ??= now;
     this.refresh(ctx);
+  }
+
+  /** Rattache une pièce (sans dépense) ; sa lecture complète les champs vides. */
+  attachReceipt(receipt: ReceiptProps, ctx: ExpenseContext): void {
+    if (this.props.receipt) {
+      throw new InvalidStateError("cette dépense a déjà sa pièce");
+    }
+    this.props.receipt = { ...receipt };
+    if (receipt.extraction && this.props.status !== ExpenseStatusDTO.BOOKED) {
+      // Les champs déjà renseignés restent ; la pièce complète les autres.
+      this.applyExtraction(
+        receipt.extraction,
+        ctx,
+        receipt.extractedAt ?? new Date(),
+        this.extracted,
+      );
+    } else {
+      this.refresh(ctx);
+    }
+  }
+
+  /** Détache la pièce (elle redevient une pièce sans dépense). */
+  detachReceipt(ctx: ExpenseContext): ReceiptProps | null {
+    const receipt = this.props.receipt;
+    this.props.receipt = null;
+    this.refresh(ctx);
+    return receipt;
   }
 
   /** Corrections : chaque champ fourni devient une saisie manuelle. */
@@ -269,10 +417,9 @@ export class Expense {
         },
         ctx.categories,
       );
-      const byAi = p.extraction?.categoryCode
-        ? ctx.categories.find(
-            (c) => c.active && c.code === p.extraction!.categoryCode,
-          )
+      const aiCode = this.extraction?.categoryCode;
+      const byAi = aiCode
+        ? ctx.categories.find((c) => c.active && c.code === aiCode)
         : undefined;
       if (byRule) {
         p.categoryId = byRule.id;
@@ -293,6 +440,7 @@ export class Expense {
       paymentAccount: this.account(ctx),
       hasCategory: !!p.categoryId,
       transactionId: p.transactionId,
+      hasReceipt: !!p.receipt,
     });
   }
 
@@ -337,6 +485,7 @@ export class Expense {
       creditAccountNo: p.creditAccountNo,
       bexioTaxId: p.bexioTaxId,
       transactionId: p.transactionId,
+      hasReceipt: !!p.receipt,
     });
   }
 
@@ -347,7 +496,7 @@ export class Expense {
     bexioExpenseId: string | null = null,
   ): void {
     if (this.props.status !== ExpenseStatusDTO.READY) {
-      throw new InvalidStateError("seule une pièce prête se comptabilise");
+      throw new InvalidStateError("seule une dépense prête se comptabilise");
     }
     this.props.status = ExpenseStatusDTO.BOOKED;
     this.props.bexioEntryId = entryId;
@@ -356,8 +505,36 @@ export class Expense {
     this.props.bookedById = userId;
   }
 
+  /** Les liens qui manquent : pièce, dépense bexio, rapprochement. */
+  issues(ctx: Pick<ExpenseContext, "accounts">): ExpenseIssueDTO[] {
+    return expenseIssues({
+      status: this.props.status,
+      hasReceipt: !!this.props.receipt,
+      bexioExpenseId: this.props.bexioExpenseId,
+      bexioEntryId: this.props.bexioEntryId,
+      reconciliation: this.account(ctx)?.reconciliation ?? null,
+      transactionId: this.props.transactionId,
+    });
+  }
+
+  /**
+   * Une dépense qui n'est que sa pièce (née de l'inbox, sans transaction,
+   * sans bexio, non comptabilisée) : sa pièce peut passer à une autre dépense.
+   */
+  isLoneReceipt(): boolean {
+    const p = this.props;
+    return (
+      p.source === ExpenseSourceDTO.RECEIPT &&
+      !!p.receipt &&
+      !p.transactionId &&
+      !p.bexioExpenseId &&
+      !p.bexioEntryId &&
+      p.status !== ExpenseStatusDTO.BOOKED
+    );
+  }
+
   setFileUuid(uuid: string): void {
-    this.props.bexioFileUuid = uuid;
+    if (this.props.receipt) this.props.receipt.bexioFileUuid = uuid;
   }
 
   /**
@@ -366,14 +543,14 @@ export class Expense {
    */
   linkBexioExpense(bexioExpenseId: string, now = new Date()): void {
     if (this.props.status === ExpenseStatusDTO.IGNORED) {
-      throw new InvalidStateError("pièce ignorée : restaurez-la d'abord");
+      throw new InvalidStateError("dépense ignorée : restaurez-la d'abord");
     }
     if (
       this.props.bexioExpenseId &&
       this.props.bexioExpenseId !== bexioExpenseId
     ) {
       throw new InvalidStateError(
-        "cette pièce est déjà liée à une autre dépense bexio",
+        "cette dépense est déjà rattachée à une autre dépense bexio",
       );
     }
     this.props.bexioExpenseId = bexioExpenseId;
@@ -401,7 +578,7 @@ export class Expense {
   /** Rouvre une pièce comptabilisée (l'écriture bexio reste à annuler dans bexio). */
   unbook(ctx: ExpenseContext): void {
     if (this.props.status !== ExpenseStatusDTO.BOOKED) {
-      throw new InvalidStateError("cette pièce n'est pas comptabilisée");
+      throw new InvalidStateError("cette dépense n'est pas comptabilisée");
     }
     this.props.status = ExpenseStatusDTO.TO_REVIEW;
     this.props.bexioEntryId = null;
@@ -419,7 +596,7 @@ export class Expense {
 
   restoreFromIgnored(ctx: ExpenseContext): void {
     if (this.props.status !== ExpenseStatusDTO.IGNORED) {
-      throw new InvalidStateError("cette pièce n'est pas ignorée");
+      throw new InvalidStateError("cette dépense n'est pas ignorée");
     }
     this.props.status = ExpenseStatusDTO.TO_REVIEW;
     this.props.ignoreReason = null;

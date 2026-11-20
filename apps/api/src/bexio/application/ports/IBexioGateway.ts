@@ -75,8 +75,14 @@ export interface IBexioGateway {
   /** UUID d'un fichier connu par son id. */
   fileUuid(id: string): Promise<string>;
   listBankAccounts(): Promise<BexioBankAccount[]>;
-  /** Toutes les dépenses (pages de 500). */
-  listExpenses(): Promise<BexioExpense[]>;
+  /** Les dépenses, filtrées par date de paiement et fournisseur (pages de 500). */
+  listExpenses(filter?: {
+    paidFrom?: string;
+    paidTo?: string;
+    vendor?: string;
+  }): Promise<BexioExpense[]>;
+  /** Une dépense (`null` si elle n'existe pas). */
+  getExpense(id: string): Promise<BexioExpense | null>;
   /** Crée la dépense, pièce jointe, et la passe à `DONE` ; rend son UUID. */
   createExpense(input: BexioExpenseInput): Promise<string>;
   /** Joint des fichiers à une dépense existante (les pièces déjà jointes restent). */

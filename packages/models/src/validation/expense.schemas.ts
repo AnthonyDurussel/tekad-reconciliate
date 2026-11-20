@@ -1,4 +1,4 @@
-import { boolean, number, string, type ObjectSchema } from "yup";
+import { number, string, type ObjectSchema } from "yup";
 import type {
   IgnoreDTO,
   MatchExpenseDTO,
@@ -6,9 +6,11 @@ import type {
 } from "../@types/dto/expense.dto.js";
 import type { RevolutImportDTO } from "../@types/dto/revolut.dto.js";
 import type {
-  LinkBexioExpenseDTO,
-  SetBexioExpenseAccountDTO,
-} from "../@types/dto/bexioExpense.dto.js";
+  CreateExpenseFromBexioDTO,
+  CreateExpenseFromTransactionDTO,
+  LinkExpenseBexioDTO,
+  LinkReceiptDTO,
+} from "../@types/dto/expense.dto.js";
 import {
   optionalDay,
   optionalId,
@@ -26,31 +28,33 @@ const accountNo = () =>
     .nullable()
     .optional();
 
-export const updateExpenseSchema: ObjectSchema<UpdateExpenseDTO> = strictObject({
-  date: optionalDay(),
-  merchant: string().trim().max(255).nullable().optional(),
-  description: optionalText(1000),
-  totalAmount: money(),
-  currency: string()
-    .trim()
-    .uppercase()
-    .matches(/^[A-Z]{3}$/, "devise : code ISO à 3 lettres")
-    .nullable()
-    .optional(),
-  vatAmount: money(),
-  vatRate: number().min(0).max(100).nullable().optional(),
-  cardLast4: string()
-    .trim()
-    .matches(/^\d{4}$/, "carte : 4 chiffres")
-    .nullable()
-    .optional(),
-  paymentAccountId: optionalId(),
-  categoryId: optionalId(),
-  debitAccountNo: accountNo(),
-  creditAccountNo: accountNo(),
-  bexioTaxId: number().integer().min(1).nullable().optional(),
-  note: optionalText(),
-});
+export const updateExpenseSchema: ObjectSchema<UpdateExpenseDTO> = strictObject(
+  {
+    date: optionalDay(),
+    merchant: string().trim().max(255).nullable().optional(),
+    description: optionalText(1000),
+    totalAmount: money(),
+    currency: string()
+      .trim()
+      .uppercase()
+      .matches(/^[A-Z]{3}$/, "devise : code ISO à 3 lettres")
+      .nullable()
+      .optional(),
+    vatAmount: money(),
+    vatRate: number().min(0).max(100).nullable().optional(),
+    cardLast4: string()
+      .trim()
+      .matches(/^\d{4}$/, "carte : 4 chiffres")
+      .nullable()
+      .optional(),
+    paymentAccountId: optionalId(),
+    categoryId: optionalId(),
+    debitAccountNo: accountNo(),
+    creditAccountNo: accountNo(),
+    bexioTaxId: number().integer().min(1).nullable().optional(),
+    note: optionalText(),
+  },
+);
 
 export const matchExpenseSchema: ObjectSchema<MatchExpenseDTO> = strictObject({
   transactionId: string().trim().uuid().nullable().defined(),
@@ -63,20 +67,26 @@ export const ignoreSchema: ObjectSchema<IgnoreDTO> = strictObject({
 /** 10 Mo de texte : plusieurs années de relevé. */
 export const MAX_STATEMENT_LENGTH = 10_000_000;
 
-export const revolutImportSchema: ObjectSchema<RevolutImportDTO> = strictObject({
-  fileName: string().trim().max(255).nullable().optional(),
-  content: string()
-    .min(1, "fichier vide")
-    .max(MAX_STATEMENT_LENGTH, "fichier trop volumineux (10 Mo au plus)")
-    .required(),
-  paymentAccountId: optionalId(),
+export const revolutImportSchema: ObjectSchema<RevolutImportDTO> = strictObject(
+  {
+    fileName: string().trim().max(255).nullable().optional(),
+    content: string()
+      .min(1, "fichier vide")
+      .max(MAX_STATEMENT_LENGTH, "fichier trop volumineux (10 Mo au plus)")
+      .required(),
+    paymentAccountId: optionalId(),
+  },
+);
+
+export const createExpenseFromTransactionSchema: ObjectSchema<CreateExpenseFromTransactionDTO> =
+  strictObject({ transactionId: string().trim().uuid().required() });
+
+export const createExpenseFromBexioSchema: ObjectSchema<CreateExpenseFromBexioDTO> =
+  strictObject({ bexioExpenseId: string().trim().uuid().required() });
+
+export const linkReceiptSchema: ObjectSchema<LinkReceiptDTO> = strictObject({
+  receiptId: string().trim().uuid().required(),
 });
 
-export const linkBexioExpenseSchema: ObjectSchema<LinkBexioExpenseDTO> =
-  strictObject({ expenseId: string().trim().uuid().required() });
-
-export const setBexioExpenseAccountSchema: ObjectSchema<SetBexioExpenseAccountDTO> =
-  strictObject({
-    paymentAccountId: string().trim().uuid().nullable().defined(),
-    applyToAccount: boolean().optional(),
-  });
+export const linkExpenseBexioSchema: ObjectSchema<LinkExpenseBexioDTO> =
+  strictObject({ bexioExpenseId: string().trim().uuid().required() });

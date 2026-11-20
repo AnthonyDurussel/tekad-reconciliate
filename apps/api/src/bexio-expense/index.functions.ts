@@ -10,7 +10,7 @@ import { BEXIO_EXPENSE_TYPES } from "@/bexio-expense/infrastructure/ioc/types.be
 const controller = (c: Container) =>
   c.get<BexioExpenseController>(BEXIO_EXPENSE_TYPES.BexioExpenseController);
 
-/** Dépenses bexio. Le lien d'une pièce écrit dans bexio : hors transaction. */
+/** Dépenses bexio, lues en direct. */
 export function registerBexioExpenseRoutes(app: HttpRouteRegistrar) {
   route(app, {
     name: "listBexioExpenses",
@@ -35,29 +35,5 @@ export function registerBexioExpenseRoutes(app: HttpRouteRegistrar) {
     access: PermissionDTO.EXPENSE_VIEW,
     tx: false,
     handler: (c, r) => controller(c).file(r),
-  });
-  route(app, {
-    name: "setBexioExpensePaymentAccount",
-    methods: ["PUT"],
-    path: "bexio-expenses/{id}/payment-account",
-    access: PermissionDTO.EXPENSE_MANAGE,
-    tx: true,
-    handler: (c, r) => controller(c).setPaymentAccount(r),
-  });
-  route(app, {
-    name: "linkBexioExpense",
-    methods: ["POST"],
-    path: "bexio-expenses/{id}/link",
-    access: PermissionDTO.EXPENSE_MANAGE,
-    tx: false,
-    handler: (c, r) => controller(c).link(r),
-  });
-  route(app, {
-    name: "unlinkBexioExpense",
-    methods: ["POST"],
-    path: "bexio-expenses/{id}/unlink",
-    access: PermissionDTO.EXPENSE_MANAGE,
-    tx: true,
-    handler: (c, r) => controller(c).unlink(r),
   });
 }

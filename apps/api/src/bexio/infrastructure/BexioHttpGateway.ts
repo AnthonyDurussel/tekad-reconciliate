@@ -214,7 +214,23 @@ export class BexioHttpGateway implements IBexioGateway {
     };
   }
 
-  async listAccounts(): Promise<BexioAccountDTO[]> {
+  private cache = new Map<string, { at: number; value: Promise<unknown> }>();
+
+  /** Plan comptable et comptes bancaires : relus au plus toutes les 5 minutes. */
+  private cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < 300_000) return hit.value as Promise<T>;
+    const value = load();
+    value.catch(() => this.cache.delete(key));
+    this.cache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  listAccounts(): Promise<BexioAccountDTO[]> {
+    return this.cached("accounts", () => this.loadAccounts());
+  }
+
+  private async loadAccounts(): Promise<BexioAccountDTO[]> {
     const rows = await this.json<BexioAccountRow[]>("2.0/accounts?limit=2000");
     const accounts = rows.map(toBexioAccount);
     this.accounts = new Map(accounts.map((a) => [a.accountNo, a.id]));
@@ -254,7 +270,11 @@ export class BexioHttpGateway implements IBexioGateway {
     return file.uuid;
   }
 
-  async listBankAccounts(): Promise<BexioBankAccount[]> {
+  listBankAccounts(): Promise<BexioBankAccount[]> {
+    return this.cached("banks", () => this.loadBankAccounts());
+  }
+
+  private async loadBankAccounts(): Promise<BexioBankAccount[]> {
     const rows = await this.json<
       {
         id: number;
@@ -271,17 +291,45 @@ export class BexioHttpGateway implements IBexioGateway {
     }));
   }
 
-  async listExpenses(): Promise<BexioExpense[]> {
+  async listExpenses(
+    filter: { paidFrom?: string; paidTo?: string; vendor?: string } = {},
+  ): Promise<BexioExpense[]> {
     const all: BexioExpense[] = [];
+    const params = new URLSearchParams({
+      limit: "500",
+      sort: "paid_on",
+      order: "desc",
+    });
+    if (filter.paidFrom) params.set("paid_on_start", filter.paidFrom);
+    if (filter.paidTo) params.set("paid_on_end", filter.paidTo);
+    if (filter.vendor) params.set("vendor", filter.vendor);
     for (let page = 1; ; page++) {
+      params.set("page", String(page));
       const body = await this.json<{
         data: BexioExpenseRow[];
         paging?: { page_count?: number };
-      }>(`4.0/expenses?limit=500&page=${page}&sort=paid_on&order=desc`);
+      }>(`4.0/expenses?${params}`);
       all.push(...body.data.map(toBexioExpense));
       const pages = body.paging?.page_count ?? 1;
       if (page >= pages || body.data.length === 0) return all;
     }
+  }
+
+  async getExpense(id: string): Promise<BexioExpense | null> {
+    const response = await this.fetchImpl(
+      `${this.baseUrl}/4.0/expenses/${encodeURIComponent(id)}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${this.token}`,
+        },
+      },
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new InternalServerError(`bexio a répondu ${response.status}`);
+    }
+    return toBexioExpense((await response.json()) as BexioExpenseRow);
   }
 
   async createExpense(input: BexioExpenseInput): Promise<string> {
@@ -441,6 +489,9 @@ export class UnconfiguredBexioGateway implements IBexioGateway {
     this.fail();
   }
   listExpenses(): Promise<BexioExpense[]> {
+    this.fail();
+  }
+  getExpense(): Promise<BexioExpense | null> {
     this.fail();
   }
   createExpense(): Promise<string> {

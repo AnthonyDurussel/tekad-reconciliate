@@ -51,13 +51,23 @@ export class PrismaRevolutTransactionRepository implements IRevolutTransactionRe
     const where: Prisma.RevolutTransactionDBWhereInput = {
       occurred_at: { gte: f.from, lt: f.to },
     };
-    if (f.filter === "missing") Object.assign(where, MISSING);
+    // Pièce à demander : pas de dépense, ou une dépense encore sans pièce.
+    if (f.filter === "missing")
+      Object.assign(where, {
+        requires_receipt: true,
+        ignored: false,
+        OR: [{ expense_id: null }, { expense: { receipt_id: null } }],
+      } satisfies Prisma.RevolutTransactionDBWhereInput);
     if (f.filter === "matched") where.expense_id = { not: null };
     if (f.filter === "ignored") where.ignored = true;
     if (f.search) {
-      where.OR = [
-        { merchant_name: { contains: f.search, mode: "insensitive" } },
-        { description: { contains: f.search, mode: "insensitive" } },
+      where.AND = [
+        {
+          OR: [
+            { merchant_name: { contains: f.search, mode: "insensitive" } },
+            { description: { contains: f.search, mode: "insensitive" } },
+          ],
+        },
       ];
     }
     const rows = await this.prisma.revolutTransactionDB.findMany({

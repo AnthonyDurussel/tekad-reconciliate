@@ -1,8 +1,13 @@
 import { inject, injectable } from "inversify";
 import type { HttpRequest, HttpResponseInit } from "@azure/functions";
 import {
+  ExpenseIssueDTO,
   ExpenseStatusDTO,
+  createExpenseFromBexioSchema,
+  createExpenseFromTransactionSchema,
   ignoreSchema,
+  linkExpenseBexioSchema,
+  linkReceiptSchema,
   matchExpenseSchema,
   updateExpenseSchema,
   type MatchCandidateDTO,
@@ -15,6 +20,7 @@ import {
 } from "@/shared/infrastructure/http/query.js";
 import { queryDay } from "@/shared/infrastructure/http/period.js";
 import { ok } from "@/shared/infrastructure/http/responses.js";
+import { fileResponse } from "@/shared/infrastructure/http/fileResponse.js";
 import { xlsxResponse } from "@/shared/infrastructure/excel/workbook.js";
 import { ValidationError } from "@/shared/domain/errors.js";
 import { dayToDate, todayIso } from "@/shared/domain/dates.js";
@@ -38,8 +44,17 @@ function idOrNone(request: HttpRequest, name: string): string | undefined {
   return value;
 }
 
-function filterOf(request: HttpRequest): ExpenseFilter {
+const ISSUES: readonly string[] = [...Object.values(ExpenseIssueDTO), "ok"];
+
+function filterOf(
+  request: HttpRequest,
+): ExpenseFilter & { issue?: ExpenseIssueDTO | "ok" } {
+  const issue = queryString(request, "issue");
+  if (issue && !ISSUES.includes(issue)) {
+    throw new ValidationError("query: issue invalide");
+  }
   return {
+    issue: issue as ExpenseIssueDTO | "ok" | undefined,
     from: dayToDate(queryDay(request, "from")) ?? undefined,
     to: dayAfter(queryDay(request, "to")),
     paymentAccountId: idOrNone(request, "paymentAccountId"),
@@ -66,7 +81,7 @@ export class ExpenseController {
     const views = await this.useCases.list(filterOf(request));
     return xlsxResponse(
       expenseWorkbook(views.map((v) => ExpenseMapper.toDTO(v, false))),
-      `pieces-${todayIso()}.xlsx`,
+      `depenses-${todayIso()}.xlsx`,
     );
   }
 
@@ -75,18 +90,67 @@ export class ExpenseController {
   }
 
   async file(request: HttpRequest): Promise<HttpResponseInit> {
-    const file = await this.useCases.file(pathId(request));
-    const name = file.fileName.replace(/["\r\n]/g, "");
-    return {
-      status: 200,
-      headers: {
-        "Content-Type": file.mimeType,
-        "Content-Disposition": `inline; filename="${name}"`,
-        "Cache-Control": "private, max-age=3600",
-        "X-Content-Type-Options": "nosniff",
-      },
-      body: new Uint8Array(file.data),
-    };
+    return fileResponse(await this.useCases.file(pathId(request)));
+  }
+
+  async receiptFile(request: HttpRequest): Promise<HttpResponseInit> {
+    return fileResponse(await this.useCases.receiptFileById(pathId(request)));
+  }
+
+  async receiptCandidates(request: HttpRequest): Promise<HttpResponseInit> {
+    return ok(await this.useCases.receiptCandidates(pathId(request)));
+  }
+
+  async bexioCandidates(request: HttpRequest): Promise<HttpResponseInit> {
+    return ok(await this.useCases.bexioCandidates(pathId(request)));
+  }
+
+  async createFromTransaction(request: HttpRequest): Promise<HttpResponseInit> {
+    const body = await parseBody(request, createExpenseFromTransactionSchema);
+    return ok(
+      ExpenseMapper.toDTO(
+        await this.useCases.createFromTransaction(body.transactionId),
+      ),
+    );
+  }
+
+  async createFromBexio(request: HttpRequest): Promise<HttpResponseInit> {
+    const body = await parseBody(request, createExpenseFromBexioSchema);
+    return ok(
+      ExpenseMapper.toDTO(
+        await this.useCases.createFromBexio(body.bexioExpenseId),
+      ),
+    );
+  }
+
+  async linkReceipt(request: HttpRequest): Promise<HttpResponseInit> {
+    const body = await parseBody(request, linkReceiptSchema);
+    return ok(
+      ExpenseMapper.toDTO(
+        await this.useCases.linkReceipt(pathId(request), body.receiptId),
+      ),
+    );
+  }
+
+  async unlinkReceipt(request: HttpRequest): Promise<HttpResponseInit> {
+    return ok(
+      ExpenseMapper.toDTO(await this.useCases.unlinkReceipt(pathId(request))),
+    );
+  }
+
+  async linkBexio(request: HttpRequest): Promise<HttpResponseInit> {
+    const body = await parseBody(request, linkExpenseBexioSchema);
+    return ok(
+      ExpenseMapper.toDTO(
+        await this.useCases.linkBexio(pathId(request), body.bexioExpenseId),
+      ),
+    );
+  }
+
+  async unlinkBexio(request: HttpRequest): Promise<HttpResponseInit> {
+    return ok(
+      ExpenseMapper.toDTO(await this.useCases.unlinkBexio(pathId(request))),
+    );
   }
 
   async candidates(request: HttpRequest): Promise<HttpResponseInit> {

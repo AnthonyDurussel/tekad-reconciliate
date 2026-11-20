@@ -179,14 +179,12 @@ async function seedDemo() {
     },
   ];
   for (const r of receipts) {
-    if (await prisma.expenseDB.findUnique({ where: { bexio_file_id: r.file } }))
+    if (await prisma.receiptDB.findUnique({ where: { bexio_file_id: r.file } }))
       continue;
     await prisma.expenseDB.create({
       data: {
-        bexio_file_id: r.file,
-        file_name: r.name,
-        mime_type: r.name.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
         status: ExpenseStatusDTO.TO_REVIEW,
+        source: "RECEIPT",
         date: day(r.offset),
         merchant: r.merchant,
         total_amount: r.total,
@@ -195,19 +193,29 @@ async function seedDemo() {
         card_last4: r.card,
         payment_method: r.card ? "card" : "cash",
         extracted_at: new Date(),
-        extraction: {
-          merchant: r.merchant,
-          date: day(r.offset).toISOString().slice(0, 10),
-          totalAmount: r.total,
-          currency: r.currency,
-          vatAmount: null,
-          vatRate: 8.1,
-          cardLast4: r.card,
-          paymentMethod: r.card ? "card" : "cash",
-          categoryCode: null,
-          description: null,
-          confidence: 0.9,
-          error: null,
+        receipt: {
+          create: {
+            bexio_file_id: r.file,
+            file_name: r.name,
+            mime_type: r.name.endsWith(".pdf")
+              ? "application/pdf"
+              : "image/jpeg",
+            extracted_at: new Date(),
+            extraction: {
+              merchant: r.merchant,
+              date: day(r.offset).toISOString().slice(0, 10),
+              totalAmount: r.total,
+              currency: r.currency,
+              vatAmount: null,
+              vatRate: 8.1,
+              cardLast4: r.card,
+              paymentMethod: r.card ? "card" : "cash",
+              categoryCode: null,
+              description: null,
+              confidence: 0.9,
+              error: null,
+            },
+          },
         },
       },
     });
