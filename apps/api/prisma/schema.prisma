@@ -202,3 +202,24 @@ model SyncRunDB {
   @@index([source, started_at])
   @@map("sync_runs")
 }
+
+// ===== IA =====
+/// Réglages de l'IA (une seule ligne) : OpenRouter, Mistral OCR + modèle
+/// d'extraction. Sans ligne, les variables OPENROUTER_* s'appliquent.
+model AiSettingsDB {
+  id               String   @id @default("default")
+  enabled          Boolean  @default(true)
+  /// OPENROUTER (seul fournisseur)
+  provider         String   @default("OPENROUTER")
+  /// Clé API scellée (AES-256-GCM, SETTINGS_ENCRYPTION_KEY) ; jamais rendue.
+  api_key_sealed   String?
+  api_key_hint     String?
+  extraction_model String
+  /// mistral-ocr | pdf-text | native
+  ocr_engine       String   @default("mistral-ocr")
+  updated_at       DateTime @updatedAt
+  updated_by_id    String?
+  updated_by_name  String?
+
+  @@map("ai_settings")
+}

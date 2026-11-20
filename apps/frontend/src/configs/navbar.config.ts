@@ -4,6 +4,7 @@ import {
   IconCreditCard,
   IconLayoutDashboard,
   IconReceipt,
+  IconSparkles,
   IconUsers,
 } from "@tabler/icons-react";
 import { PermissionDTO } from "@repo/models";
@@ -47,6 +48,13 @@ export const adminNavigationConfig: NavigationItem[] = [
     path: "/admin/categories",
     translateKey: "nav.admin.categories",
     icon: IconCategory,
+    permissions: [PermissionDTO.SETTINGS_MANAGE],
+  },
+  {
+    key: "adminAi",
+    path: "/admin/ai",
+    translateKey: "nav.admin.ai",
+    icon: IconSparkles,
     permissions: [PermissionDTO.SETTINGS_MANAGE],
   },
   {

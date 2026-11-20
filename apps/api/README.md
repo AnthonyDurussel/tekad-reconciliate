@@ -12,7 +12,8 @@ Prisma / HTTP / services externes, `ioc/`) et `index.functions.ts`.
 | `expense`      | pièces de l'inbox bexio : lecture, classement, rapprochement, comptabilisation, Excel |
 | `revolut`      | import du relevé CSV Revolut Business, transactions, pièces manquantes                |
 | `bexio`        | port `IBexioGateway` et adaptateur HTTP (inbox, fichiers, écritures manuelles)        |
-| `extraction`   | port `IReceiptReader`, adaptateur Claude (vision + sortie JSON)                       |
+| `extraction`   | port `IReceiptReader`, adaptateur OpenRouter (Mistral OCR + modèle, sortie JSON)      |
+| `ai`           | réglages de l'IA (OpenRouter) administrés dans l'application, runtime               |
 | `sync`         | synchronisations journalisées + minuteur de nuit                                      |
 | `dashboard`    | agrégats par statut, compte et type                                                   |
 | `notification` | e-mail (Azure Communication Email ou journal)                                         |
@@ -22,7 +23,7 @@ Prisma / HTTP / services externes, `ioc/`) et `index.functions.ts`.
 ```bash
 sudo -u postgres psql -c "CREATE USER tekad WITH PASSWORD 'tekad' CREATEDB;"
 sudo -u postgres psql -c "CREATE DATABASE tekad OWNER tekad;"
-cp local.settings.json.example local.settings.json   # DATABASE_URL, BEXIO_*, ANTHROPIC_API_KEY
+cp local.settings.json.example local.settings.json   # DATABASE_URL, BEXIO_*, SETTINGS_ENCRYPTION_KEY, OPENROUTER_API_KEY (ou réglage dans l'app)
 pnpm migrate            # migrations
 pnpm seed               # comptes de paiement, types de dépense + démonstration (SEED_DEMO=false : sans)
 pnpm dev                # esbuild + func start (Azure Functions Core Tools, Azurite)
@@ -43,4 +44,4 @@ Le premier compte qui se connecte sans administrateur actif en base devient `ADM
 
 `pnpm test` (vitest) : agrégat `Expense`, cas d'usage des pièces avec faux adaptateurs (inbox →
 lecture → rapprochement → écriture bexio), adaptateur bexio (fetch simulé), lecture du relevé CSV Revolut,
-normalisation de la lecture Claude, tableau de bord, table des routes, comptes et autorisations.
+lecture OpenRouter (requête simulée), réglages de l'IA, tableau de bord, table des routes, comptes et autorisations.

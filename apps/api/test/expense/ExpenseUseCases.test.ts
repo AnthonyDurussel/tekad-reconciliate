@@ -93,7 +93,7 @@ function setup(readings: Record<string, ExtractionDTO>) {
     },
   };
   const reader: IReceiptReader = {
-    configured: true,
+    isConfigured: async () => true,
     read: async (file) => readings[file.data.toString()],
   };
   const useCases = new ExpenseUseCases(

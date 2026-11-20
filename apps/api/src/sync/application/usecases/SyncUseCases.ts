@@ -32,7 +32,7 @@ export class SyncUseCases {
   async status(): Promise<SyncStatusDTO> {
     return {
       bexioConfigured: this.expenses.bexioConfigured,
-      extractionConfigured: this.expenses.readerConfigured,
+      extractionConfigured: await this.expenses.readerConfigured(),
       revolutLatestTransaction:
         (await this.revolut.latestTransaction())?.toISOString() ?? null,
       last: await this.runs.lastBySource(),
@@ -43,12 +43,15 @@ export class SyncUseCases {
     return this.runs.list(limit);
   }
 
-  private configured(source: SyncSourceDTO): boolean {
+  private async configured(source: SyncSourceDTO): Promise<boolean> {
     switch (source) {
       case SyncSourceDTO.BEXIO_INBOX:
         return this.expenses.bexioConfigured;
       case SyncSourceDTO.EXTRACTION:
-        return this.expenses.bexioConfigured && this.expenses.readerConfigured;
+        return (
+          this.expenses.bexioConfigured &&
+          (await this.expenses.readerConfigured())
+        );
       case SyncSourceDTO.REVOLUT:
       case SyncSourceDTO.MATCHING:
         return true;
@@ -60,7 +63,7 @@ export class SyncUseCases {
     userId: string | null,
     work: () => Promise<number>,
   ): Promise<SyncRunDTO> {
-    if (!this.configured(source)) {
+    if (!(await this.configured(source))) {
       throw new ConflictError(`${source} : non configuré`);
     }
     const id = await this.runs.start(source, userId);
@@ -135,9 +138,9 @@ export class SyncUseCases {
   /** Tout ce qui est configuré, dans l'ordre (le relevé Revolut s'importe à part). */
   async all(userId: string | null): Promise<SyncRunDTO[]> {
     const results: SyncRunDTO[] = [];
-    if (this.configured(SyncSourceDTO.BEXIO_INBOX))
+    if (await this.configured(SyncSourceDTO.BEXIO_INBOX))
       results.push(await this.bexioInbox(userId));
-    if (this.configured(SyncSourceDTO.EXTRACTION))
+    if (await this.configured(SyncSourceDTO.EXTRACTION))
       results.push(await this.extract(userId));
     results.push(await this.match(userId));
     return results;

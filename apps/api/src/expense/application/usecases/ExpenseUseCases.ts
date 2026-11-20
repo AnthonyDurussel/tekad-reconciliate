@@ -95,8 +95,8 @@ export class ExpenseUseCases {
     return { expense, ctx: await this.context(expense) };
   }
 
-  get readerConfigured() {
-    return this.reader.configured;
+  readerConfigured(): Promise<boolean> {
+    return this.reader.isConfigured();
   }
   get bexioConfigured() {
     return this.bexio.configured;
@@ -162,7 +162,7 @@ export class ExpenseUseCases {
         ),
       });
     } catch (error) {
-      if (error instanceof ConflictError && !this.reader.configured)
+      if (error instanceof ConflictError && !(await this.reader.isConfigured()))
         throw error;
       log.warn(`[extraction] ${expense.snapshot.fileName}`, error);
       extraction = {
@@ -323,9 +323,9 @@ export class ExpenseUseCases {
 
   /** Lit les pièces pas encore lues, par lots ; rend le nombre lu. */
   async extractPending(limit = EXTRACT_BATCH): Promise<number> {
-    if (!this.reader.configured) {
+    if (!(await this.reader.isConfigured())) {
       throw new ConflictError(
-        "la lecture des pièces n'est pas configurée (ANTHROPIC_API_KEY)",
+        "la lecture des pièces n'est pas configurée (Administration → Intelligence artificielle)",
       );
     }
     const pending = await this.expenses.listByStatus(

@@ -165,7 +165,8 @@ Prérequis : propriétaire de l'abonnement, `az login`, `gh auth login` (admin d
    ACS_ACCESS_KEY=<clé d'accès de la ressource Communication Services>
    # réconciliation (facultatifs : sans eux, la source correspondante répond 409)
    BEXIO_API_TOKEN=<jeton personnel bexio : fichiers + comptabilité>
-   ANTHROPIC_API_KEY=<clé API Claude, lecture des pièces>
+   SETTINGS_ENCRYPTION_KEY=<secret aléatoire ≥ 32 caractères : scelle la clé OpenRouter saisie dans l'application>
+   OPENROUTER_API_KEY=<facultatif : clé OpenRouter si elle n'est pas saisie dans l'application>
    # comptes : vérification du tenant Entra ID du domaine (facultatif : sans elles, rien n'est vérifié)
    ENTRA_GRAPH_CLIENT_ID=<id d'application (client) de l'inscription Graph>
    ENTRA_GRAPH_CLIENT_SECRET=<son secret client>

@@ -19,6 +19,7 @@ export const API_TAG_TYPES = [
   "RevolutTransaction",
   "Dashboard",
   "Sync",
+  "AiSettings",
 ] as const;
 
 export type ApiTagType = (typeof API_TAG_TYPES)[number];

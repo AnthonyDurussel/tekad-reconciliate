@@ -10,7 +10,8 @@ export interface ReceiptReadingContext {
 
 /** Port de lecture d'un ticket / d'une facture. */
 export interface IReceiptReader {
-  readonly configured: boolean;
+  /** Réglages de l'IA présents et activés (lus au moment de l'appel). */
+  isConfigured(): Promise<boolean>;
   read(
     file: StoredFile,
     context: ReceiptReadingContext,

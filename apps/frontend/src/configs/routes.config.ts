@@ -40,6 +40,12 @@ export const protectedRoutes: Route[] = [
     permissions: [PermissionDTO.SETTINGS_MANAGE],
   },
   {
+    key: "adminAi",
+    path: "/admin/ai",
+    component: lazy(() => import("@/pages/admin/AiSettingsPage")),
+    permissions: [PermissionDTO.SETTINGS_MANAGE],
+  },
+  {
     key: "adminUsers",
     path: "/admin/users",
     component: lazy(() => import("@/pages/admin/UsersPage")),

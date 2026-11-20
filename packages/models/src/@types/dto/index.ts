@@ -4,3 +4,4 @@ export * from "./expense.dto.js";
 export * from "./revolut.dto.js";
 export * from "./sync.dto.js";
 export * from "./dashboard.dto.js";
+export * from "./aiSettings.dto.js";

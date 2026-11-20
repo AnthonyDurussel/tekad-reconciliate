@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `tekad-reconciliate` reconciles the **company's expenses** between **Revolut Business**, **UBS**,
 **Anthony's current account** (compte courant associé) and **bexio**. Every receipt is dropped into
-the **bexio inbox**; the app imports it, **reads it** (Claude vision: merchant, date, amount, VAT,
-**the last 4 digits of the card**), **classifies it by payment account** from the card, proposes an
+the **bexio inbox**; the app imports it, **reads it** (**Mistral OCR through OpenRouter**, then an LLM chosen in the
+app extracts merchant, date, amount, VAT, **the last 4 digits of the card**), **classifies it by payment account** from the card, proposes an
 **expense type** and the **bexio booking** (debit expense account / credit payment account / VAT
 code), **matches Revolut receipts with the Revolut Business transactions** — imported from the **CSV
 statement exported from Revolut Business** (the subscription has no API access) — and lists the
@@ -27,7 +27,7 @@ UI language is **French** (i18n fr + en).
 
 Each module: `domain/` (pure), `application/` (use cases + **ports**: `repositories/I*Repository.ts`,
 `ports/I*.ts`), `infrastructure/` (Prisma repositories, HTTP controllers, **adapters** to bexio /
-Revolut / Claude, `ioc/` bindings), `index.functions.ts` (routes). Use cases only see ports.
+Revolut / OpenRouter, `ioc/` bindings), `index.functions.ts` (routes). Use cases only see ports.
 
 | Module            | Role                                                                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -36,7 +36,8 @@ Revolut / Claude, `ioc/` bindings), `index.functions.ts` (routes). Use cases onl
 | `expense`         | receipts: import, extraction, classification, matching, booking (`IExpenseRepository`)                                                    |
 | `revolut`         | Revolut transactions (`IRevolutTransactionRepository`), CSV statement import (`domain/RevolutStatement.ts`, pure parser)                   |
 | `bexio`           | port `IBexioGateway` (inbox files, download, accounts, taxes, manual entries + attachment), adapter `BexioHttpGateway`                     |
-| `extraction`      | port `IReceiptReader`, adapter `ClaudeReceiptReader` (Anthropic SDK, structured output)                                                    |
+| `extraction`      | port `IReceiptReader`, adapter `OpenRouterReceiptReader` (Mistral OCR `file-parser` plugin + JSON-schema output)                          |
+| `ai`              | AI settings administered in the app (`ai_settings`, like dranse-risque): OpenRouter key sealed, extraction model, OCR engine; `AiRuntime` |
 | `sync`            | orchestration: `SyncUseCases` (inbox → extraction → matching; Revolut statement import + matching), `sync_runs` log, nightly timer        |
 | `dashboard`       | aggregates per status / account / type, missing receipts                                                                                   |
 | `config`          | backend info                                                                                                                               |
@@ -60,7 +61,7 @@ payment account, type, and **for Revolut the matched transaction**) → `BOOKED`
 Precedence: a MANUAL value is never overwritten by a re-extraction or a sync.
 
 Classification order for the payment account: card on the receipt → the matched Revolut
-transaction's account → manual. Type: keyword/MCC rule → Claude's proposal (`categoryCode`) → manual.
+transaction's account → manual. Type: keyword/MCC rule → the AI's proposal (`categoryCode`) → manual.
 
 Revolut statement (`parseRevolutStatement()`): Revolut Business → Transactions → Statement → CSV.
 Columns found by name (English export: `Date started (UTC)`, `Date completed (UTC)`, `ID`, `Type`,
@@ -116,6 +117,7 @@ typed errors → request container → declared `access` (403). Bodies: `parseBo
 | `POST revolut/transactions/{id}/ignore`, `/restore`                                          | `EXPENSE_MANAGE`                   | `IgnoreDTO` → `RevolutTransactionDTO`                             |
 | `GET dashboard?from&to`                                                                      | `EXPENSE_VIEW`                     | `DashboardDTO`                                                    |
 | `GET sync/status`, `GET sync/runs`                                                           | `EXPENSE_VIEW`                     | `SyncStatusDTO` / `SyncRunDTO[]` (50 last)                        |
+| `GET/PUT/DELETE ai/settings`, `POST ai/settings/models`, `POST ai/settings/test`              | `SETTINGS_MANAGE`                  | `AiSettingsDTO` / `UpdateAiSettingsDTO` (`apiKey` absent keeps the stored one) / back to env; `AiConnectionDTO` → `AiModelDTO[]` / `AiConnectionTestDTO` |
 | `POST revolut/import`                                                                        | `SYNC_RUN`                         | `RevolutImportDTO` (CSV text, ≤ 10 MB) → `RevolutImportResultDTO`; 400 if unreadable |
 | `POST sync/bexio-inbox`, `POST sync/extract`, `POST sync/match`, `POST sync/all`             | `SYNC_RUN`                         | → `SyncRunDTO` (`sync/all` → `SyncRunDTO[]`); 409 if not configured |
 
@@ -126,7 +128,16 @@ Timer `nightlySync` (05:15 UTC, `SYNC_CRON` overrides): `sync/all` when configur
 - `DATABASE_URL` (local) / `DATABASE_ENTRA_URL` (Azure).
 - bexio: `BEXIO_API_TOKEN` (personal access token, scopes: `file`, `accounting`, `kb_*` read), `BEXIO_API_URL` (default `https://api.bexio.com`).
 - Revolut: nothing — the statement is uploaded (`POST revolut/import`).
-- Claude: `ANTHROPIC_API_KEY`, `RECEIPT_MODEL` (default `claude-opus-5-5`).
+- AI: set in the app (« Intelligence artificielle », `SETTINGS_MANAGE`) — OpenRouter API key (sealed AES-256-GCM with `SETTINGS_ENCRYPTION_KEY` ≥ 32 chars, hint `…abcd` only, never returned), extraction model (catalogue `GET /models` listed by the screen, « JSON » badge = structured outputs), OCR engine (`mistral-ocr` default, `pdf-text`, `native`), test call. `AiRuntime` resolves stored row (disabled or unreadable key → AI off) › env `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` / `OPENROUTER_OCR_ENGINE`; cached 30 s, invalidated on save.
+
+## AI — reading a receipt
+
+`OpenRouterReceiptReader`: one `POST /chat/completions` on OpenRouter with the file as a `file` part
+(PDF; a JPEG / PNG is first wrapped into a one-page PDF with pdf-lib so that Mistral OCR reads it;
+other images, or engine `native`, go as `image_url` to the model), `plugins: [{ id: "file-parser",
+pdf: { engine } }]`, `response_format` json_schema (strict) and a French system prompt; the answer is
+normalised by `toExtraction()` (dates, ISO currency, card last 4 cross-checked with
+`detectCardLast4()`, category code only from the list passed).
 
 ## Frontend screens
 
@@ -135,7 +146,7 @@ Revolut receipts, last syncs + sync buttons); `/expenses` « Pièces » (filters
 account**, **type**, status, search — kept in the URL; table with account / type / booking / status;
 Excel); `/expenses/:id` (receipt preview, extracted fields, account & type, booking proposal,
 Revolut match + candidates, actions); `/revolut` « Revolut » (« Importer le relevé Revolut (CSV) », also in the dashboard sync panel; transactions; tab **Pièces manquantes**);
-`/admin/accounts` « Comptes et cartes », `/admin/categories` « Types de dépense », `/admin/users`.
+`/admin/accounts` « Comptes et cartes », `/admin/categories` « Types de dépense », `/admin/ai` « Intelligence artificielle », `/admin/users`.
 Home: `/dashboard`.
 
 ## Commands

@@ -70,7 +70,8 @@
       "main": "Administration",
       "accounts": "Accounts & cards",
       "categories": "Expense types",
-      "users": "Users"
+      "users": "Users",
+      "ai": "Artificial intelligence"
     }
   },
   "period": {
@@ -124,7 +125,7 @@
     "history": "Latest runs",
     "service": {
       "bexio": "bexio",
-      "extraction": "Reading (Claude)"
+      "extraction": "Reading (OpenRouter · Mistral OCR)"
     },
     "run": {
       "bexio-inbox": "Import the bexio inbox",
@@ -473,5 +474,50 @@
     "errors_other": "{{count}} unreadable lines, e.g. {{first}}",
     "failed": "Statement not imported",
     "hint": "Revolut Business → Transactions → Statement → CSV. Re-importing updates without duplicates."
+  },
+  "aiSettings": {
+    "title": "Artificial intelligence",
+    "subtitle": "Receipt reading: Mistral OCR and the model that extracts the fields, through OpenRouter.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "source": {
+      "DATABASE": "Settings saved in the app.",
+      "ENVIRONMENT": "Nothing saved: the server variables apply (OPENROUTER_API_KEY, model {{model}}).",
+      "NONE": "Nothing configured: receipts are not read. Enter an OpenRouter key and pick a model."
+    },
+    "updated": "Updated on {{date}} by {{name}}",
+    "noEncryption": "SETTINGS_ENCRYPTION_KEY is missing on this server: no API key can be saved.",
+    "keyUnreadable": "The saved key can no longer be decrypted (server secret changed): enter it again.",
+    "provider": "OpenRouter",
+    "enabled": "Receipt reading enabled",
+    "apiKey": "OpenRouter API key",
+    "apiKeyHelp": "openrouter.ai → Keys. Encrypted in the database, never shown again.",
+    "apiKeyKeep": "Saved key ({{hint}}): leave empty to keep it.",
+    "apiKeyRequired": "Enter the OpenRouter API key",
+    "ocr": "Document reading (OCR)",
+    "engine": {
+      "mistral-ocr": "Mistral OCR",
+      "pdf-text": "PDF text",
+      "native": "The model"
+    },
+    "engineHelp": {
+      "mistral-ocr": "Recommended: reads scans, receipt photos and PDF invoices (paid per page on OpenRouter). JPEG / PNG photos are wrapped into a PDF to go through the OCR.",
+      "pdf-text": "Free, but only reads the embedded text of a PDF: useless on a scan or a photo.",
+      "native": "The file is sent to the model as is: it must read PDFs and images."
+    },
+    "model": "Extraction model",
+    "extractionModel": "Model",
+    "extractionModelHelp": "Reads the OCR text and extracts merchant, date, amount, VAT, card and expense type. Price in $ per million tokens (input / output).",
+    "loadModels": "Load the OpenRouter catalogue",
+    "reloadModels": "Reload",
+    "noModel": "No model",
+    "onlyJson_one": "Only models with JSON output ({{count}})",
+    "onlyJson_other": "Only models with JSON output ({{count}})",
+    "noJsonWarning": "This model does not guarantee JSON output: reading may fail more often.",
+    "test": "Test the model",
+    "testOk": "{{model}} answers ({{ms}} ms)",
+    "testFailed": "Test failed",
+    "reset": "Back to server variables",
+    "resetConfirm": "Saved settings (key included) will be erased; the server's OPENROUTER_* variables will apply."
   }
 }

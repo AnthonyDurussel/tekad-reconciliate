@@ -70,7 +70,8 @@
       "main": "Administration",
       "accounts": "Comptes et cartes",
       "categories": "Types de dépense",
-      "users": "Utilisateurs"
+      "users": "Utilisateurs",
+      "ai": "Intelligence artificielle"
     }
   },
   "period": {
@@ -124,7 +125,7 @@
     "history": "Derniers passages",
     "service": {
       "bexio": "bexio",
-      "extraction": "Lecture (Claude)"
+      "extraction": "Lecture (OpenRouter · Mistral OCR)"
     },
     "run": {
       "bexio-inbox": "Importer l'inbox bexio",
@@ -473,5 +474,50 @@
     "errors_other": "{{count}} lignes illisibles, dont : {{first}}",
     "failed": "Relevé non importé",
     "hint": "Revolut Business → Transactions → Relevé → CSV. Réimporter un relevé met à jour sans doublon."
+  },
+  "aiSettings": {
+    "title": "Intelligence artificielle",
+    "subtitle": "La lecture des pièces : Mistral OCR et le modèle qui en tire les champs, via OpenRouter.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "source": {
+      "DATABASE": "Réglages enregistrés dans l'application.",
+      "ENVIRONMENT": "Aucun réglage enregistré : les variables du serveur s'appliquent (OPENROUTER_API_KEY, modèle {{model}}).",
+      "NONE": "Rien de configuré : les pièces ne sont pas lues. Saisissez une clé OpenRouter et choisissez un modèle."
+    },
+    "updated": "Modifiés le {{date}} par {{name}}",
+    "noEncryption": "Le secret SETTINGS_ENCRYPTION_KEY manque sur ce serveur : aucune clé API ne peut être enregistrée.",
+    "keyUnreadable": "La clé enregistrée ne se déchiffre plus (secret du serveur changé) : saisissez-la à nouveau.",
+    "provider": "OpenRouter",
+    "enabled": "Lecture des pièces activée",
+    "apiKey": "Clé API OpenRouter",
+    "apiKeyHelp": "openrouter.ai → Keys. Chiffrée en base, jamais réaffichée.",
+    "apiKeyKeep": "Clé enregistrée ({{hint}}) : laissez vide pour la garder.",
+    "apiKeyRequired": "Saisissez la clé API OpenRouter",
+    "ocr": "Lecture des documents (OCR)",
+    "engine": {
+      "mistral-ocr": "Mistral OCR",
+      "pdf-text": "Texte du PDF",
+      "native": "Le modèle"
+    },
+    "engineHelp": {
+      "mistral-ocr": "Recommandé : lit les scans, les photos de tickets et les factures PDF (payant à la page sur OpenRouter). Les photos JPEG / PNG sont mises en PDF pour passer par l'OCR.",
+      "pdf-text": "Gratuit, mais ne lit que le texte embarqué d'un PDF : inutile sur un scan ou une photo.",
+      "native": "Le fichier est envoyé au modèle tel quel : il doit savoir lire les PDF et les images."
+    },
+    "model": "Modèle d'extraction",
+    "extractionModel": "Modèle",
+    "extractionModelHelp": "Lit le texte rendu par l'OCR et en tire commerçant, date, montant, TVA, carte et type de dépense. Prix en $ par million de jetons (entrée / sortie).",
+    "loadModels": "Charger le catalogue OpenRouter",
+    "reloadModels": "Recharger",
+    "noModel": "Aucun modèle",
+    "onlyJson_one": "Seulement les modèles à sortie JSON ({{count}})",
+    "onlyJson_other": "Seulement les modèles à sortie JSON ({{count}})",
+    "noJsonWarning": "Ce modèle ne garantit pas une sortie JSON : la lecture peut échouer plus souvent.",
+    "test": "Tester le modèle",
+    "testOk": "{{model}} répond ({{ms}} ms)",
+    "testFailed": "Échec du test",
+    "reset": "Revenir aux variables du serveur",
+    "resetConfirm": "Les réglages enregistrés (clé comprise) seront effacés ; les variables OPENROUTER_* du serveur s'appliqueront."
   }
 }

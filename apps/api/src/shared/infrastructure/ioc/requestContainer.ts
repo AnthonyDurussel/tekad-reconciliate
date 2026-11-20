@@ -9,6 +9,7 @@ import { configureUserContainer } from "@/user/infrastructure/ioc/container.user
 import { configureNotificationContainer } from "@/notification/infrastructure/ioc/container.notification.js";
 import { configureSettingsContainer } from "@/settings/infrastructure/ioc/container.settings.js";
 import { configureBexioContainer } from "@/bexio/infrastructure/ioc/container.bexio.js";
+import { configureAiContainer } from "@/ai/infrastructure/ioc/container.ai.js";
 import { configureExtractionContainer } from "@/extraction/infrastructure/ioc/container.extraction.js";
 import { configureRevolutContainer } from "@/revolut/infrastructure/ioc/container.revolut.js";
 import { configureExpenseContainer } from "@/expense/infrastructure/ioc/container.expense.js";
@@ -35,6 +36,7 @@ export function createRequestContainer(
       configureNotificationContainer(options);
       configureSettingsContainer(options);
       configureBexioContainer(options);
+      configureAiContainer(options);
       configureExtractionContainer(options);
       configureRevolutContainer(options);
       configureExpenseContainer(options);
